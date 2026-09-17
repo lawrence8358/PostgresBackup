@@ -1,0 +1,33 @@
+## [Visual Studio]
+.vs/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+
+## [Build Results]
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## [Test Results]
+TestResults/
+[Tt]est[Rr]esult*/
+
+## [OS Generated]
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+## [Packages]
+*.nupkg
+packages/
+
+## [SQLite]
+*.db
+*.db-shm
+*.db-wal
+backup_history.db

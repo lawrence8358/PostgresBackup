@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace"/>
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0"/>
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string"/>
+              <xsd:attribute name="type" type="xsd:string"/>
+              <xsd:attribute name="mimetype" type="xsd:string"/>
+              <xsd:attribute ref="xml:space"/>
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string"/>
+              <xsd:attribute name="name" type="xsd:string"/>
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1"/>
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2"/>
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string"/>
+              <xsd:attribute name="type" type="xsd:string"/>
+              <xsd:attribute name="mimetype" type="xsd:string"/>
+              <xsd:attribute ref="xml:space"/>
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1"/>
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string"/>
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="App_Title" xml:space="preserve">
+    <value>PostgresBackup</value>
+  </data>
+  <data name="App_Subtitle" xml:space="preserve">
+    <value>PostgreSQL Backup &amp; Restore Utility</value>
+  </data>
+  <data name="Nav_Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Nav_Backup" xml:space="preserve">
+    <value>Backup</value>
+  </data>
+  <data name="Nav_Restore" xml:space="preserve">
+    <value>Restore</value>
+  </data>
+  <data name="Nav_History" xml:space="preserve">
+    <value>History</value>
+  </data>
+  <data name="Nav_Log" xml:space="preserve">
+    <value>Log</value>
+  </data>
+  <data name="Settings_Title" xml:space="preserve">
+    <value>Settings &amp; Tool Detection</value>
+  </data>
+  <data name="Settings_ClientTools_Title" xml:space="preserve">
+    <value>PostgreSQL Client Tools (pg_dump / pg_restore)</value>
+  </data>
+  <data name="Settings_ToolStatus" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Settings_ToolStatus_Ready" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="Settings_ToolStatus_Incompatible" xml:space="preserve">
+    <value>Version Incompatible</value>
+  </data>
+  <data name="Settings_ToolStatus_NotFound" xml:space="preserve">
+    <value>Not Detected</value>
+  </data>
+  <data name="Settings_ToolSource" xml:space="preserve">
+    <value>Detection Source</value>
+  </data>
+  <data name="Settings_PgDumpPath" xml:space="preserve">
+    <value>pg_dump Path</value>
+  </data>
+  <data name="Settings_PgRestorePath" xml:space="preserve">
+    <value>pg_restore Path</value>
+  </data>
+  <data name="Settings_ToolVersion" xml:space="preserve">
+    <value>Client Version</value>
+  </data>
+  <data name="Settings_CustomPath" xml:space="preserve">
+    <value>Custom Tools Directory</value>
+  </data>
+  <data name="Settings_CustomPath_Placeholder" xml:space="preserve">
+    <value>e.g. C:\Program Files\PostgreSQL\16\bin</value>
+  </data>
+  <data name="Settings_Browse" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="Settings_Redetect" xml:space="preserve">
+    <value>Re-detect</value>
+  </data>
+  <data name="Settings_Guide_Title" xml:space="preserve">
+    <value>Official Client Tools Installation Guide</value>
+  </data>
+  <data name="Settings_Guide_Intro" xml:space="preserve">
+    <value>PostgresBackup requires official PostgreSQL client tools (pg_dump &amp; pg_restore) to perform reliable database backup and restore operations.</value>
+  </data>
+  <data name="Settings_Guide_OfficialLink" xml:space="preserve">
+    <value>PostgreSQL Windows Downloads</value>
+  </data>
+  <data name="Settings_Guide_Winget_Title" xml:space="preserve">
+    <value>Quick install via Windows Package Manager (winget):</value>
+  </data>
+  <data name="Settings_Guide_CopyCommand" xml:space="preserve">
+    <value>Copy Command</value>
+  </data>
+  <data name="Settings_Guide_Copied" xml:space="preserve">
+    <value>Copied!</value>
+  </data>
+  <data name="Settings_Guide_EdbLink" xml:space="preserve">
+    <value>EnterpriseDB (EDB) Installers</value>
+  </data>
+  <data name="Settings_Guide_PostInstallNotice" xml:space="preserve">
+    <value>Click 'Re-detect' after installing to verify your environment.</value>
+  </data>
+  <data name="Settings_Connection_Title" xml:space="preserve">
+    <value>PostgreSQL Connection Settings</value>
+  </data>
+  <data name="Settings_Host" xml:space="preserve">
+    <value>Host</value>
+  </data>
+  <data name="Settings_Port" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="Settings_Database" xml:space="preserve">
+    <value>Database</value>
+  </data>
+  <data name="Settings_Username" xml:space="preserve">
+    <value>Username</value>
+  </data>
+  <data name="Settings_Password" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="Settings_TestConnection" xml:space="preserve">
+    <value>Test Connection &amp; Check Compatibility</value>
+  </data>
+  <data name="Settings_ConnectionSuccess" xml:space="preserve">
+    <value>Connection successful</value>
+  </data>
+  <data name="Settings_ConnectionFailed" xml:space="preserve">
+    <value>Connection failed</value>
+  </data>
+</root>

@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace"/>
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0"/>
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string"/>
+              <xsd:attribute name="type" type="xsd:string"/>
+              <xsd:attribute name="mimetype" type="xsd:string"/>
+              <xsd:attribute ref="xml:space"/>
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string"/>
+              <xsd:attribute name="name" type="xsd:string"/>
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1"/>
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2"/>
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string"/>
+              <xsd:attribute name="type" type="xsd:string"/>
+              <xsd:attribute name="mimetype" type="xsd:string"/>
+              <xsd:attribute ref="xml:space"/>
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1"/>
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string"/>
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="App_Title" xml:space="preserve">
+    <value>PostgresBackup</value>
+  </data>
+  <data name="App_Subtitle" xml:space="preserve">
+    <value>PostgreSQL 資料庫備份與還原工具</value>
+  </data>
+  <data name="Nav_Settings" xml:space="preserve">
+    <value>設定</value>
+  </data>
+  <data name="Nav_Backup" xml:space="preserve">
+    <value>備份</value>
+  </data>
+  <data name="Nav_Restore" xml:space="preserve">
+    <value>還原</value>
+  </data>
+  <data name="Nav_History" xml:space="preserve">
+    <value>歷史紀錄</value>
+  </data>
+  <data name="Nav_Log" xml:space="preserve">
+    <value>即時日誌</value>
+  </data>
+  <data name="Settings_Title" xml:space="preserve">
+    <value>設定與環境檢查</value>
+  </data>
+  <data name="Settings_ClientTools_Title" xml:space="preserve">
+    <value>PostgreSQL 客戶端工具 (pg_dump / pg_restore)</value>
+  </data>
+  <data name="Settings_ToolStatus" xml:space="preserve">
+    <value>狀態</value>
+  </data>
+  <data name="Settings_ToolStatus_Ready" xml:space="preserve">
+    <value>就緒</value>
+  </data>
+  <data name="Settings_ToolStatus_Incompatible" xml:space="preserve">
+    <value>版本不相容</value>
+  </data>
+  <data name="Settings_ToolStatus_NotFound" xml:space="preserve">
+    <value>未偵測到</value>
+  </data>
+  <data name="Settings_ToolSource" xml:space="preserve">
+    <value>偵測來源</value>
+  </data>
+  <data name="Settings_PgDumpPath" xml:space="preserve">
+    <value>pg_dump 路徑</value>
+  </data>
+  <data name="Settings_PgRestorePath" xml:space="preserve">
+    <value>pg_restore 路徑</value>
+  </data>
+  <data name="Settings_ToolVersion" xml:space="preserve">
+    <value>客戶端版本</value>
+  </data>
+  <data name="Settings_CustomPath" xml:space="preserve">
+    <value>自訂工具目錄 (bin)</value>
+  </data>
+  <data name="Settings_CustomPath_Placeholder" xml:space="preserve">
+    <value>例如：C:\Program Files\PostgreSQL\16\bin</value>
+  </data>
+  <data name="Settings_Browse" xml:space="preserve">
+    <value>瀏覽...</value>
+  </data>
+  <data name="Settings_Redetect" xml:space="preserve">
+    <value>重新偵測</value>
+  </data>
+  <data name="Settings_Guide_Title" xml:space="preserve">
+    <value>官方客戶端工具安裝指引</value>
+  </data>
+  <data name="Settings_Guide_Intro" xml:space="preserve">
+    <value>PostgresBackup 需要官方 PostgreSQL 客戶端工具 (pg_dump 與 pg_restore) 才能進行備份與還原作業。</value>
+  </data>
+  <data name="Settings_Guide_OfficialLink" xml:space="preserve">
+    <value>前往 PostgreSQL 官方下載頁面</value>
+  </data>
+  <data name="Settings_Guide_Winget_Title" xml:space="preserve">
+    <value>使用 Windows 內建 winget 快速安裝：</value>
+  </data>
+  <data name="Settings_Guide_CopyCommand" xml:space="preserve">
+    <value>複製命令</value>
+  </data>
+  <data name="Settings_Guide_Copied" xml:space="preserve">
+    <value>已複製！</value>
+  </data>
+  <data name="Settings_Guide_EdbLink" xml:space="preserve">
+    <value>前往 EnterpriseDB (EDB) 下載專區</value>
+  </data>
+  <data name="Settings_Guide_PostInstallNotice" xml:space="preserve">
+    <value>安裝完成後請點擊上方「重新偵測」按鈕驗證環境。</value>
+  </data>
+  <data name="Settings_Connection_Title" xml:space="preserve">
+    <value>PostgreSQL 伺服器連線設定</value>
+  </data>
+  <data name="Settings_Host" xml:space="preserve">
+    <value>主機位址</value>
+  </data>
+  <data name="Settings_Port" xml:space="preserve">
+    <value>連接埠</value>
+  </data>
+  <data name="Settings_Database" xml:space="preserve">
+    <value>資料庫名稱</value>
+  </data>
+  <data name="Settings_Username" xml:space="preserve">
+    <value>使用者名稱</value>
+  </data>
+  <data name="Settings_Password" xml:space="preserve">
+    <value>密碼</value>
+  </data>
+  <data name="Settings_TestConnection" xml:space="preserve">
+    <value>測試連線並檢查相容性</value>
+  </data>
+  <data name="Settings_ConnectionSuccess" xml:space="preserve">
+    <value>連線成功</value>
+  </data>
+  <data name="Settings_ConnectionFailed" xml:space="preserve">
+    <value>連線失敗</value>
+  </data>
+</root>
