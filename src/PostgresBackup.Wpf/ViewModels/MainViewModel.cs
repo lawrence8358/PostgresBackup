@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using PostgresBackup.Core.Models;
 
 namespace PostgresBackup.Wpf.ViewModels;
 
@@ -8,9 +9,32 @@ public partial class MainViewModel : ObservableObject
     private string _windowTitle = "PostgresBackup — PostgreSQL 官方工具備份與還原";
 
     public SettingsViewModel Settings { get; }
+    public BackupViewModel Backup { get; }
+    public RestoreViewModel Restore { get; }
+    public HistoryViewModel History { get; }
+    public LogViewModel Log { get; }
 
-    public MainViewModel(SettingsViewModel settings)
+    public event Action<string>? NavigationRequested;
+
+    public MainViewModel(
+        SettingsViewModel settings,
+        BackupViewModel backup,
+        RestoreViewModel restore,
+        HistoryViewModel history,
+        LogViewModel log)
     {
         Settings = settings;
+        Backup = backup;
+        Restore = restore;
+        History = history;
+        Log = log;
+
+        History.RequestRestore += OnRequestRestore;
+    }
+
+    private void OnRequestRestore(BackupRecord record)
+    {
+        Restore.SetRestoreTarget(record.FilePath, record.DatabaseName);
+        NavigationRequested?.Invoke("Restore");
     }
 }

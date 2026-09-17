@@ -106,6 +106,10 @@
             <ContentControl x:Name="MainContent">
                 <ContentControl.Resources>
                     <views:SettingsView x:Key="SettingsPage" DataContext="{Binding Settings}"/>
+                    <views:BackupView x:Key="BackupPage" DataContext="{Binding Backup}"/>
+                    <views:RestoreView x:Key="RestorePage" DataContext="{Binding Restore}"/>
+                    <views:HistoryView x:Key="HistoryPage" DataContext="{Binding History}"/>
+                    <views:LogView x:Key="LogPage" DataContext="{Binding Log}"/>
                 </ContentControl.Resources>
             </ContentControl>
         </Border>

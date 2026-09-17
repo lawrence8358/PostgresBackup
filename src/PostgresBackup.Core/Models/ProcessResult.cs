@@ -6,4 +6,5 @@ namespace PostgresBackup.Core.Models;
 public record ProcessResult(int ExitCode, string StandardOutput, string StandardError)
 {
     public bool Success => ExitCode == 0;
+    public string? ErrorMessage => !string.IsNullOrWhiteSpace(StandardError) ? StandardError : null;
 }

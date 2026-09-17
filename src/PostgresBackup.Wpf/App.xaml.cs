@@ -23,9 +23,19 @@ public partial class App : Application
         services.AddSingleton<IProcessRunner, ProcessRunner>();
         services.AddSingleton<IEnvironmentProbe, WindowsEnvironmentProbe>();
         services.AddSingleton<IToolDetectionService, ToolDetectionService>();
+        services.AddSingleton<ICredentialStorage, WindowsCredentialStorage>();
+        services.AddSingleton<IConnectionProfileRepository, JsonConnectionProfileRepository>();
+        services.AddSingleton<IClientToolRunner, ClientToolRunner>();
+        services.AddSingleton<IBackupHistoryRepository, SqliteBackupHistoryRepository>();
+        services.AddSingleton<IBackupService, BackupService>();
+        services.AddSingleton<IRestoreService, RestoreService>();
 
         // 註冊 ViewModels
         services.AddSingleton<SettingsViewModel>();
+        services.AddSingleton<BackupViewModel>();
+        services.AddSingleton<RestoreViewModel>();
+        services.AddSingleton<HistoryViewModel>();
+        services.AddSingleton<LogViewModel>();
         services.AddSingleton<MainViewModel>();
 
         // 註冊視窗

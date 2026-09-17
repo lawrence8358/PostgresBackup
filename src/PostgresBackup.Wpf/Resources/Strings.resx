@@ -169,7 +169,199 @@
   <data name="Settings_ConnectionSuccess" xml:space="preserve">
     <value>Connection successful</value>
   </data>
-  <data name="Settings_ConnectionFailed" xml:space="preserve">
-    <value>Connection failed</value>
+  <data name="Settings_Profile" xml:space="preserve">
+    <value>Connection Profile</value>
+  </data>
+  <data name="Settings_Profile_New" xml:space="preserve">
+    <value>+ New Profile</value>
+  </data>
+  <data name="Settings_Profile_Name" xml:space="preserve">
+    <value>Profile Name</value>
+  </data>
+  <data name="Settings_Profile_Save" xml:space="preserve">
+    <value>Save Profile</value>
+  </data>
+  <data name="Settings_Profile_Delete" xml:space="preserve">
+    <value>Delete Profile</value>
+  </data>
+  <data name="Settings_Profile_Saved" xml:space="preserve">
+    <value>Profile saved successfully.</value>
+  </data>
+  <data name="Settings_Profile_Deleted" xml:space="preserve">
+    <value>Profile deleted.</value>
+  </data>
+  <data name="Backup_Title" xml:space="preserve">
+    <value>Database Backup</value>
+  </data>
+  <data name="Backup_Card_Config" xml:space="preserve">
+    <value>Backup Configuration</value>
+  </data>
+  <data name="Backup_SelectProfile" xml:space="preserve">
+    <value>Connection Profile</value>
+  </data>
+  <data name="Backup_Format" xml:space="preserve">
+    <value>Backup Format</value>
+  </data>
+  <data name="Backup_Format_Custom" xml:space="preserve">
+    <value>Custom Binary (Custom, -Fc, Recommended)</value>
+  </data>
+  <data name="Backup_Format_Plain" xml:space="preserve">
+    <value>Plain SQL Script (Plain SQL, -Fp)</value>
+  </data>
+  <data name="Backup_Scope" xml:space="preserve">
+    <value>Backup Scope</value>
+  </data>
+  <data name="Backup_Scope_Full" xml:space="preserve">
+    <value>Full Database</value>
+  </data>
+  <data name="Backup_Scope_Schema" xml:space="preserve">
+    <value>Specific Schemas</value>
+  </data>
+  <data name="Backup_Scope_Table" xml:space="preserve">
+    <value>Specific Tables</value>
+  </data>
+  <data name="Backup_Mode" xml:space="preserve">
+    <value>Backup Mode</value>
+  </data>
+  <data name="Backup_Mode_All" xml:space="preserve">
+    <value>Schema + Data</value>
+  </data>
+  <data name="Backup_Mode_SchemaOnly" xml:space="preserve">
+    <value>Schema Only (-s)</value>
+  </data>
+  <data name="Backup_Mode_DataOnly" xml:space="preserve">
+    <value>Data Only (-a)</value>
+  </data>
+  <data name="Backup_OutputDir" xml:space="preserve">
+    <value>Output Directory</value>
+  </data>
+  <data name="Backup_FileName" xml:space="preserve">
+    <value>File Name Preview</value>
+  </data>
+  <data name="Backup_Start" xml:space="preserve">
+    <value>Start Backup</value>
+  </data>
+  <data name="Backup_Running" xml:space="preserve">
+    <value>Backing up...</value>
+  </data>
+  <data name="Backup_Terminal" xml:space="preserve">
+    <value>Live Terminal Output &amp; Logs</value>
+  </data>
+  <data name="Backup_ClearLog" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Backup_CopyLog" xml:space="preserve">
+    <value>Copy Log</value>
+  </data>
+  <data name="Restore_Title" xml:space="preserve">
+    <value>Safe Database Restore</value>
+  </data>
+  <data name="Restore_Card_Config" xml:space="preserve">
+    <value>Restore Configuration</value>
+  </data>
+  <data name="Restore_SourceFile" xml:space="preserve">
+    <value>Source Backup File</value>
+  </data>
+  <data name="Restore_TargetProfile" xml:space="preserve">
+    <value>Target Connection Profile</value>
+  </data>
+  <data name="Restore_TargetDb" xml:space="preserve">
+    <value>Target Database Name</value>
+  </data>
+  <data name="Restore_Mode" xml:space="preserve">
+    <value>Restore Mode</value>
+  </data>
+  <data name="Restore_Mode_Clean" xml:space="preserve">
+    <value>Clean &amp; Recreate (--clean --create)</value>
+  </data>
+  <data name="Restore_Mode_Normal" xml:space="preserve">
+    <value>Normal Restore (Create missing objects)</value>
+  </data>
+  <data name="Restore_Mode_DataOnly" xml:space="preserve">
+    <value>Data Only (--data-only)</value>
+  </data>
+  <data name="Restore_Snapshot_Label" xml:space="preserve">
+    <value>Pre-Restore Safety Snapshot</value>
+  </data>
+  <data name="Restore_Snapshot_Desc" xml:space="preserve">
+    <value>Automatically creates a backup snapshot of the target database before restoring.</value>
+  </data>
+  <data name="Restore_Warning_Title" xml:space="preserve">
+    <value>⚠️ High-Risk Action Confirmation</value>
+  </data>
+  <data name="Restore_Warning_Desc" xml:space="preserve">
+    <value>You are about to restore onto the target database. Existing data may be overwritten or modified!</value>
+  </data>
+  <data name="Restore_Confirm_Prompt" xml:space="preserve">
+    <value>Please confirm target database:</value>
+  </data>
+  <data name="Restore_Confirm_Checkbox" xml:space="preserve">
+    <value>I understand the overwrite risk and confirm restore</value>
+  </data>
+  <data name="Restore_Start" xml:space="preserve">
+    <value>Execute Safe Restore</value>
+  </data>
+  <data name="Restore_Running" xml:space="preserve">
+    <value>Restoring...</value>
+  </data>
+  <data name="History_Title" xml:space="preserve">
+    <value>Backup &amp; Restore History</value>
+  </data>
+  <data name="History_Card_Records" xml:space="preserve">
+    <value>Audit Records</value>
+  </data>
+  <data name="History_Col_Time" xml:space="preserve">
+    <value>Timestamp</value>
+  </data>
+  <data name="History_Col_Type" xml:space="preserve">
+    <value>Operation</value>
+  </data>
+  <data name="History_Col_Db" xml:space="preserve">
+    <value>Database</value>
+  </data>
+  <data name="History_Col_Format" xml:space="preserve">
+    <value>Format</value>
+  </data>
+  <data name="History_Col_Size" xml:space="preserve">
+    <value>File Size</value>
+  </data>
+  <data name="History_Col_Duration" xml:space="preserve">
+    <value>Duration</value>
+  </data>
+  <data name="History_Col_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="History_Col_Actions" xml:space="preserve">
+    <value>Actions</value>
+  </data>
+  <data name="History_Action_OpenFile" xml:space="preserve">
+    <value>Open Folder</value>
+  </data>
+  <data name="History_Action_Restore" xml:space="preserve">
+    <value>Restore...</value>
+  </data>
+  <data name="History_Action_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="History_Filter_All" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="History_Filter_Backup" xml:space="preserve">
+    <value>Backups</value>
+  </data>
+  <data name="History_Filter_Restore" xml:space="preserve">
+    <value>Restores</value>
+  </data>
+  <data name="History_Filter_Snapshot" xml:space="preserve">
+    <value>Snapshots</value>
+  </data>
+  <data name="History_Search" xml:space="preserve">
+    <value>Search database name...</value>
+  </data>
+  <data name="History_Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Log_Title" xml:space="preserve">
+    <value>System Execution Logs</value>
   </data>
 </root>

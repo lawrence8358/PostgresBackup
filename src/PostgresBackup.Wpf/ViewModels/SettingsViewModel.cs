@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,10 +13,14 @@ namespace PostgresBackup.Wpf.ViewModels;
 public partial class SettingsViewModel : ObservableObject
 {
     private readonly IToolDetectionService _toolDetector;
+    private readonly IConnectionProfileRepository _profileRepo;
 
-    public SettingsViewModel(IToolDetectionService toolDetector)
+    public SettingsViewModel(
+        IToolDetectionService toolDetector,
+        IConnectionProfileRepository profileRepo)
     {
         _toolDetector = toolDetector;
+        _profileRepo = profileRepo;
     }
 
     // ── 客戶端工具偵測狀態 ──
@@ -48,7 +53,15 @@ public partial class SettingsViewModel : ObservableObject
         _ => "無 (None)"
     };
 
-    // ── 資料庫連線設定 ──
+    // ── 資料庫連線設定與設定檔管理 ──
+
+    public ObservableCollection<ConnectionProfile> Profiles { get; } = [];
+
+    [ObservableProperty]
+    private ConnectionProfile? _selectedProfile;
+
+    [ObservableProperty]
+    private string _profileName = "本機預設連線";
 
     [ObservableProperty]
     private string _host = "localhost";
@@ -74,7 +87,102 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private bool? _isConnectionSuccessful;
 
-    // ── 命令 ──
+    [ObservableProperty]
+    private string _serverVersionDisplay = string.Empty;
+
+    // ── 生命週期與初始化 ──
+
+    public async Task InitializeAsync()
+    {
+        await LoadProfilesAsync();
+        await DetectToolsAsync();
+    }
+
+    [RelayCommand]
+    public async Task LoadProfilesAsync()
+    {
+        Profiles.Clear();
+        var list = await _profileRepo.GetAllProfilesAsync();
+        foreach (var p in list)
+        {
+            Profiles.Add(p);
+        }
+
+        if (Profiles.Count > 0)
+        {
+            SelectedProfile = Profiles[0];
+        }
+        else
+        {
+            NewProfile();
+        }
+    }
+
+    partial void OnSelectedProfileChanged(ConnectionProfile? value)
+    {
+        if (value != null)
+        {
+            ProfileName = value.Name;
+            Host = value.Host;
+            Port = value.Port;
+            Database = value.Database;
+            Username = value.Username;
+
+            _ = LoadProfilePasswordAsync(value.Id);
+        }
+    }
+
+    private async Task LoadProfilePasswordAsync(string profileId)
+    {
+        Password = await _profileRepo.GetPasswordAsync(profileId) ?? string.Empty;
+    }
+
+    [RelayCommand]
+    public void NewProfile()
+    {
+        SelectedProfile = null;
+        ProfileName = "新連線設定檔";
+        Host = "localhost";
+        Port = 5432;
+        Database = "postgres";
+        Username = "postgres";
+        Password = string.Empty;
+        ConnectionStatusMessage = string.Empty;
+        IsConnectionSuccessful = null;
+        ServerVersionDisplay = string.Empty;
+    }
+
+    [RelayCommand]
+    public async Task SaveProfileAsync()
+    {
+        var profile = SelectedProfile ?? new ConnectionProfile();
+        profile.Name = string.IsNullOrWhiteSpace(ProfileName) ? "未命名連線" : ProfileName;
+        profile.Host = Host;
+        profile.Port = Port;
+        profile.Database = Database;
+        profile.Username = Username;
+        profile.LastUsedAt = DateTimeOffset.UtcNow;
+
+        await _profileRepo.SaveProfileAsync(profile, Password);
+
+        await LoadProfilesAsync();
+        SelectedProfile = Profiles.FirstOrDefault(p => p.Id == profile.Id);
+
+        ConnectionStatusMessage = "連線設定檔已安全儲存（密碼已存放於 Windows 憑證庫）！";
+        IsConnectionSuccessful = true;
+    }
+
+    [RelayCommand]
+    public async Task DeleteProfileAsync()
+    {
+        if (SelectedProfile == null) return;
+
+        var id = SelectedProfile.Id;
+        await _profileRepo.DeleteProfileAsync(id);
+        await LoadProfilesAsync();
+    }
+
+    // ── 客戶端工具命令 ──
 
     [RelayCommand]
     public async Task DetectToolsAsync()
@@ -163,6 +271,7 @@ public partial class SettingsViewModel : ObservableObject
         IsTestingConnection = true;
         ConnectionStatusMessage = "正在測試連線與比對版本相容性...";
         IsConnectionSuccessful = null;
+        ServerVersionDisplay = string.Empty;
 
         try
         {
@@ -183,11 +292,19 @@ public partial class SettingsViewModel : ObservableObject
             {
                 IsConnectionSuccessful = true;
                 ConnectionStatusMessage = $"連線成功！{checkResult.Message}";
+                if (checkResult.ServerMajorVersion != null)
+                {
+                    ServerVersionDisplay = $"伺服器版本: PostgreSQL {checkResult.ServerMajorVersion} ({checkResult.ServerVersionString})";
+                }
             }
             else
             {
                 IsConnectionSuccessful = false;
                 ConnectionStatusMessage = checkResult.Message;
+                if (checkResult.ServerMajorVersion != null)
+                {
+                    ServerVersionDisplay = $"伺服器版本: PostgreSQL {checkResult.ServerMajorVersion}（需至少客戶端工具同版本）";
+                }
             }
         }
         catch (Exception ex)

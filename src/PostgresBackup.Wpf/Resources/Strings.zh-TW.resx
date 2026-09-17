@@ -169,7 +169,199 @@
   <data name="Settings_ConnectionSuccess" xml:space="preserve">
     <value>連線成功</value>
   </data>
-  <data name="Settings_ConnectionFailed" xml:space="preserve">
-    <value>連線失敗</value>
+  <data name="Settings_Profile" xml:space="preserve">
+    <value>連線設定檔</value>
+  </data>
+  <data name="Settings_Profile_New" xml:space="preserve">
+    <value>+ 新增連線設定檔</value>
+  </data>
+  <data name="Settings_Profile_Name" xml:space="preserve">
+    <value>設定檔名稱</value>
+  </data>
+  <data name="Settings_Profile_Save" xml:space="preserve">
+    <value>儲存設定檔</value>
+  </data>
+  <data name="Settings_Profile_Delete" xml:space="preserve">
+    <value>刪除設定檔</value>
+  </data>
+  <data name="Settings_Profile_Saved" xml:space="preserve">
+    <value>設定檔已成功儲存！</value>
+  </data>
+  <data name="Settings_Profile_Deleted" xml:space="preserve">
+    <value>設定檔已刪除。</value>
+  </data>
+  <data name="Backup_Title" xml:space="preserve">
+    <value>資料庫備份作業</value>
+  </data>
+  <data name="Backup_Card_Config" xml:space="preserve">
+    <value>備份參數設定</value>
+  </data>
+  <data name="Backup_SelectProfile" xml:space="preserve">
+    <value>選取連線設定檔</value>
+  </data>
+  <data name="Backup_Format" xml:space="preserve">
+    <value>備份格式</value>
+  </data>
+  <data name="Backup_Format_Custom" xml:space="preserve">
+    <value>自訂二進位格式 (Custom, -Fc, 建議)</value>
+  </data>
+  <data name="Backup_Format_Plain" xml:space="preserve">
+    <value>純文字 SQL 腳本 (Plain SQL, -Fp)</value>
+  </data>
+  <data name="Backup_Scope" xml:space="preserve">
+    <value>備份範圍</value>
+  </data>
+  <data name="Backup_Scope_Full" xml:space="preserve">
+    <value>完整資料庫 (Full Database)</value>
+  </data>
+  <data name="Backup_Scope_Schema" xml:space="preserve">
+    <value>指定綱要 (Specific Schemas)</value>
+  </data>
+  <data name="Backup_Scope_Table" xml:space="preserve">
+    <value>指定資料表 (Specific Tables)</value>
+  </data>
+  <data name="Backup_Mode" xml:space="preserve">
+    <value>備份模式</value>
+  </data>
+  <data name="Backup_Mode_All" xml:space="preserve">
+    <value>結構與資料 (Schema + Data)</value>
+  </data>
+  <data name="Backup_Mode_SchemaOnly" xml:space="preserve">
+    <value>僅結構 (Schema Only, -s)</value>
+  </data>
+  <data name="Backup_Mode_DataOnly" xml:space="preserve">
+    <value>僅資料 (Data Only, -a)</value>
+  </data>
+  <data name="Backup_OutputDir" xml:space="preserve">
+    <value>備份檔案存放目錄</value>
+  </data>
+  <data name="Backup_FileName" xml:space="preserve">
+    <value>預覽輸出檔名</value>
+  </data>
+  <data name="Backup_Start" xml:space="preserve">
+    <value>開始執行備份</value>
+  </data>
+  <data name="Backup_Running" xml:space="preserve">
+    <value>備份作業執行中...</value>
+  </data>
+  <data name="Backup_Terminal" xml:space="preserve">
+    <value>即時命令輸出與日誌串流</value>
+  </data>
+  <data name="Backup_ClearLog" xml:space="preserve">
+    <value>清空終端</value>
+  </data>
+  <data name="Backup_CopyLog" xml:space="preserve">
+    <value>複製日誌</value>
+  </data>
+  <data name="Restore_Title" xml:space="preserve">
+    <value>安全還原作業</value>
+  </data>
+  <data name="Restore_Card_Config" xml:space="preserve">
+    <value>還原設定與參數</value>
+  </data>
+  <data name="Restore_SourceFile" xml:space="preserve">
+    <value>備份來源檔案</value>
+  </data>
+  <data name="Restore_TargetProfile" xml:space="preserve">
+    <value>目標連線設定檔</value>
+  </data>
+  <data name="Restore_TargetDb" xml:space="preserve">
+    <value>目標資料庫名稱</value>
+  </data>
+  <data name="Restore_Mode" xml:space="preserve">
+    <value>還原模式</value>
+  </data>
+  <data name="Restore_Mode_Clean" xml:space="preserve">
+    <value>清除並重建 (--clean --create, 覆寫模式)</value>
+  </data>
+  <data name="Restore_Mode_Normal" xml:space="preserve">
+    <value>一般還原 (僅建立遺漏物件)</value>
+  </data>
+  <data name="Restore_Mode_DataOnly" xml:space="preserve">
+    <value>僅寫入資料 (--data-only)</value>
+  </data>
+  <data name="Restore_Snapshot_Label" xml:space="preserve">
+    <value>還原前強制建立安全快照 (Pre-Restore Snapshot)</value>
+  </data>
+  <data name="Restore_Snapshot_Desc" xml:space="preserve">
+    <value>在執行資料庫還原前，系統將先對目標資料庫執行一次完整備份，作為防禦性還原點。</value>
+  </data>
+  <data name="Restore_Warning_Title" xml:space="preserve">
+    <value>⚠️ 高危險操作確認</value>
+  </data>
+  <data name="Restore_Warning_Desc" xml:space="preserve">
+    <value>您即將對目標資料庫執行還原作業，既有資料可能被清除或覆蓋！請務必核對目標資料庫名稱。</value>
+  </data>
+  <data name="Restore_Confirm_Prompt" xml:space="preserve">
+    <value>請確認受影響之目標資料庫名稱：</value>
+  </data>
+  <data name="Restore_Confirm_Checkbox" xml:space="preserve">
+    <value>我已確認目標資料庫無誤，並了解覆寫風險，同意執行還原</value>
+  </data>
+  <data name="Restore_Start" xml:space="preserve">
+    <value>確認並開始執行還原</value>
+  </data>
+  <data name="Restore_Running" xml:space="preserve">
+    <value>還原作業執行中...</value>
+  </data>
+  <data name="History_Title" xml:space="preserve">
+    <value>備份與還原歷史紀錄</value>
+  </data>
+  <data name="History_Card_Records" xml:space="preserve">
+    <value>不可變稽核清單</value>
+  </data>
+  <data name="History_Col_Time" xml:space="preserve">
+    <value>時間</value>
+  </data>
+  <data name="History_Col_Type" xml:space="preserve">
+    <value>作業類型</value>
+  </data>
+  <data name="History_Col_Db" xml:space="preserve">
+    <value>資料庫</value>
+  </data>
+  <data name="History_Col_Format" xml:space="preserve">
+    <value>格式</value>
+  </data>
+  <data name="History_Col_Size" xml:space="preserve">
+    <value>檔案大小</value>
+  </data>
+  <data name="History_Col_Duration" xml:space="preserve">
+    <value>耗時</value>
+  </data>
+  <data name="History_Col_Status" xml:space="preserve">
+    <value>狀態</value>
+  </data>
+  <data name="History_Col_Actions" xml:space="preserve">
+    <value>操作</value>
+  </data>
+  <data name="History_Action_OpenFile" xml:space="preserve">
+    <value>開啟目錄</value>
+  </data>
+  <data name="History_Action_Restore" xml:space="preserve">
+    <value>發起還原...</value>
+  </data>
+  <data name="History_Action_Delete" xml:space="preserve">
+    <value>刪除紀錄</value>
+  </data>
+  <data name="History_Filter_All" xml:space="preserve">
+    <value>全部紀錄</value>
+  </data>
+  <data name="History_Filter_Backup" xml:space="preserve">
+    <value>僅備份</value>
+  </data>
+  <data name="History_Filter_Restore" xml:space="preserve">
+    <value>僅還原</value>
+  </data>
+  <data name="History_Filter_Snapshot" xml:space="preserve">
+    <value>僅快照</value>
+  </data>
+  <data name="History_Search" xml:space="preserve">
+    <value>搜尋資料庫名稱...</value>
+  </data>
+  <data name="History_Refresh" xml:space="preserve">
+    <value>重新整理</value>
+  </data>
+  <data name="Log_Title" xml:space="preserve">
+    <value>全域系統日誌</value>
   </data>
 </root>

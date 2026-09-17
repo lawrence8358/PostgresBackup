@@ -31,3 +31,10 @@ packages/
 *.db-shm
 *.db-wal
 backup_history.db
+
+.agents
+.claude
+.codex
+.gemini
+.impeccable
+.lcaipack

@@ -16,6 +16,7 @@ public partial class MainWindow
         InitializeComponent();
 
         Loaded += MainWindow_Loaded;
+        _vm.NavigationRequested += OnNavigationRequested;
     }
 
     private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -34,8 +35,34 @@ public partial class MainWindow
         // 預設切換至 Settings 頁面
         SwitchToPage("Settings");
 
-        // 系統啟動時自動掃描客戶端工具
-        _ = _vm.Settings.DetectToolsAsync();
+        // 系統啟動時初始化連線設定檔並掃描客戶端工具
+        _ = _vm.Settings.InitializeAsync();
+    }
+
+    private void OnNavigationRequested(string pageName)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            switch (pageName)
+            {
+                case "Settings":
+                    NavSettings.IsChecked = true;
+                    break;
+                case "Backup":
+                    NavBackup.IsChecked = true;
+                    break;
+                case "Restore":
+                    NavRestore.IsChecked = true;
+                    break;
+                case "History":
+                    NavHistory.IsChecked = true;
+                    break;
+                case "Log":
+                    NavLog.IsChecked = true;
+                    break;
+            }
+            SwitchToPage(pageName);
+        });
     }
 
     private void Nav_Checked(object sender, RoutedEventArgs e)
@@ -50,25 +77,40 @@ public partial class MainWindow
     {
         if (MainContent == null) return;
 
-        if (pageName == "Settings")
+        switch (pageName)
         {
-            MainContent.Content = MainContent.Resources["SettingsPage"];
-        }
-        else
-        {
-            // 其他尚未實作之分頁提示
-            var placeholder = new Border
-            {
-                VerticalAlignment = VerticalAlignment.Center,
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Child = new TextBlock
+            case "Settings":
+                MainContent.Content = MainContent.Resources["SettingsPage"];
+                break;
+            case "Backup":
+                _ = _vm.Backup.InitializeAsync();
+                MainContent.Content = MainContent.Resources["BackupPage"];
+                break;
+            case "Restore":
+                _ = _vm.Restore.InitializeAsync();
+                MainContent.Content = MainContent.Resources["RestorePage"];
+                break;
+            case "History":
+                _ = _vm.History.LoadRecordsAsync();
+                MainContent.Content = MainContent.Resources["HistoryPage"];
+                break;
+            case "Log":
+                MainContent.Content = MainContent.Resources["LogPage"];
+                break;
+            default:
+                var placeholder = new Border
                 {
-                    Text = $"「{pageName}」模組將於後續 Ticket 實作",
-                    FontSize = 16,
-                    Foreground = System.Windows.Media.Brushes.Gray
-                }
-            };
-            MainContent.Content = placeholder;
+                    VerticalAlignment = VerticalAlignment.Center,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Child = new TextBlock
+                    {
+                        Text = $"「{pageName}」模組",
+                        FontSize = 16,
+                        Foreground = System.Windows.Media.Brushes.Gray
+                    }
+                };
+                MainContent.Content = placeholder;
+                break;
         }
     }
 

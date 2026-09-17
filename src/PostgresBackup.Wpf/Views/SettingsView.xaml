@@ -124,14 +124,14 @@
                                         hc:InfoElement.Placeholder="{l:Loc Settings_CustomPath_Placeholder}"/>
 
                             <Button Grid.Column="2"
-                                    Content="{l:Loc Settings_Browse}"
-                                    Style="{StaticResource ButtonDefault}"
-                                    Command="{Binding BrowseCustomPathCommand}"
-                                    VerticalAlignment="Bottom"
-                                    Padding="16,0" Height="32"/>
+                                     Content="{l:Loc Settings_Browse}"
+                                     Style="{StaticResource ButtonDefault}"
+                                     Command="{Binding BrowseCustomPathCommand}"
+                                     VerticalAlignment="Bottom"
+                                     Padding="16,0" Height="32"/>
                         </Grid>
 
-                        <!-- 官方安裝指引面板（未就緒時顯著展開） -->
+                        <!-- 官方安裝指引面板 -->
                         <Border Visibility="{Binding ShowGuide, Converter={StaticResource BoolToVisibilityConverter}}"
                                 Margin="0,18,0,0"
                                 Background="#0A2E7D32"
@@ -152,7 +152,7 @@
                                            Foreground="{DynamicResource PrimaryTextBrush}"
                                            FontSize="12" LineHeight="18" Margin="0,0,0,14"/>
 
-                                <!-- 方法 1: winget 快速安裝 -->
+                                <!-- winget 快速安裝 -->
                                 <Border Background="{DynamicResource RegionBrush}"
                                         CornerRadius="6" Padding="14,10" Margin="0,0,0,10"
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
@@ -199,7 +199,7 @@
                 </StackPanel>
             </hc:Card>
 
-            <!-- ── 卡片 2: 資料庫連線設定 ── -->
+            <!-- ── 卡片 2: 資料庫連線設定檔管理 ── -->
             <hc:Card Margin="0,0,0,16" Padding="0" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
                 <StackPanel>
                     <!-- 卡片標頭 -->
@@ -211,80 +211,137 @@
                         </StackPanel>
                     </Border>
 
-                    <Grid Margin="20,18,20,20">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="16"/>
-                            <ColumnDefinition Width="160"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="12"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="12"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="16"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="12"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
+                    <StackPanel Margin="20,18,20,20">
 
-                        <!-- Host + Port -->
-                        <hc:TextBox Grid.Row="0" Grid.Column="0"
-                                    Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
-                                    hc:InfoElement.Title="{l:Loc Settings_Host}"
-                                    hc:InfoElement.Placeholder="localhost"/>
-                        <hc:TextBox Grid.Row="0" Grid.Column="2"
-                                    Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
-                                    hc:InfoElement.Title="{l:Loc Settings_Port}"
-                                    hc:InfoElement.Placeholder="5432"/>
-
-                        <!-- Database -->
-                        <hc:TextBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
-                                    Text="{Binding Database, UpdateSourceTrigger=PropertyChanged}"
-                                    hc:InfoElement.Title="{l:Loc Settings_Database}"
-                                    hc:InfoElement.Placeholder="postgres"/>
-
-                        <!-- Username -->
-                        <hc:TextBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3"
-                                    Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
-                                    hc:InfoElement.Title="{l:Loc Settings_Username}"
-                                    hc:InfoElement.Placeholder="postgres"/>
-
-                        <!-- 分隔線 -->
-                        <Separator Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,4"/>
-
-                        <!-- 密碼 + 測試連線 -->
-                        <Grid Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3">
+                        <!-- 設定檔選取與切換工具列 -->
+                        <Grid Margin="0,0,0,16">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="8"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="{l:Loc Settings_Password}"
-                                           FontSize="12"
-                                           Foreground="{DynamicResource PrimaryTextBrush}"
-                                           Margin="0,0,0,6"/>
-                                <PasswordBox x:Name="PwdBox"
-                                             PasswordChanged="PasswordBox_PasswordChanged"/>
-                            </StackPanel>
+
+                            <hc:ComboBox Grid.Column="0"
+                                         ItemsSource="{Binding Profiles}"
+                                         SelectedItem="{Binding SelectedProfile}"
+                                         DisplayMemberPath="DisplayName"
+                                         hc:InfoElement.Title="{l:Loc Settings_Profile}"
+                                         Height="32"/>
+
                             <Button Grid.Column="2"
-                                    Content="{l:Loc Settings_TestConnection}"
-                                    Style="{StaticResource ButtonPrimary}"
-                                    VerticalAlignment="Bottom"
-                                    Padding="18,0" Height="32"
-                                    Command="{Binding TestConnectionCommand}"
-                                    IsEnabled="{Binding IsTestingConnection, Converter={StaticResource InvertBoolConverter}}"/>
+                                    Content="{l:Loc Settings_Profile_New}"
+                                    Style="{StaticResource ButtonDefault}"
+                                    Command="{Binding NewProfileCommand}"
+                                    Height="32" Padding="12,0"/>
+
+                            <Button Grid.Column="4"
+                                    Content="{l:Loc Settings_Profile_Delete}"
+                                    Style="{StaticResource ButtonDanger}"
+                                    Command="{Binding DeleteProfileCommand}"
+                                    IsEnabled="{Binding SelectedProfile, Converter={StaticResource InvertBoolConverter}, ConverterParameter=invertNull}"
+                                    Height="32" Padding="12,0"/>
                         </Grid>
 
-                        <!-- 連線狀態輸出 -->
-                        <TextBlock Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="3"
-                                   Text="{Binding ConnectionStatusMessage}"
-                                   FontSize="12" TextWrapping="Wrap"
-                                   FontWeight="Medium"
-                                   Foreground="{Binding IsConnectionSuccessful, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                    </Grid>
+                        <!-- 連線表單 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="160"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="12"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="12"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="12"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="16"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="12"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Profile Name -->
+                            <hc:TextBox Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
+                                        Text="{Binding ProfileName, UpdateSourceTrigger=PropertyChanged}"
+                                        hc:InfoElement.Title="{l:Loc Settings_Profile_Name}"
+                                        hc:InfoElement.Placeholder="例如：開發本機 PostgreSQL"/>
+
+                            <!-- Host + Port -->
+                            <hc:TextBox Grid.Row="2" Grid.Column="0"
+                                        Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
+                                        hc:InfoElement.Title="{l:Loc Settings_Host}"
+                                        hc:InfoElement.Placeholder="localhost"/>
+                            <hc:TextBox Grid.Row="2" Grid.Column="2"
+                                        Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
+                                        hc:InfoElement.Title="{l:Loc Settings_Port}"
+                                        hc:InfoElement.Placeholder="5432"/>
+
+                            <!-- Database -->
+                            <hc:TextBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3"
+                                        Text="{Binding Database, UpdateSourceTrigger=PropertyChanged}"
+                                        hc:InfoElement.Title="{l:Loc Settings_Database}"
+                                        hc:InfoElement.Placeholder="postgres"/>
+
+                            <!-- Username -->
+                            <hc:TextBox Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3"
+                                        Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
+                                        hc:InfoElement.Title="{l:Loc Settings_Username}"
+                                        hc:InfoElement.Placeholder="postgres"/>
+
+                            <!-- 分隔線 -->
+                            <Separator Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,4"/>
+
+                            <!-- 密碼 + 測試連線 + 儲存設定檔 -->
+                            <Grid Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="3">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="8"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="{l:Loc Settings_Password}"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource PrimaryTextBrush}"
+                                               Margin="0,0,0,6"/>
+                                    <PasswordBox x:Name="PwdBox"
+                                                 PasswordChanged="PasswordBox_PasswordChanged"/>
+                                </StackPanel>
+
+                                <Button Grid.Column="2"
+                                        Content="{l:Loc Settings_TestConnection}"
+                                        Style="{StaticResource ButtonDefault}"
+                                        VerticalAlignment="Bottom"
+                                        Padding="14,0" Height="32"
+                                        Command="{Binding TestConnectionCommand}"
+                                        IsEnabled="{Binding IsTestingConnection, Converter={StaticResource InvertBoolConverter}}"/>
+
+                                <Button Grid.Column="4"
+                                        Content="{l:Loc Settings_Profile_Save}"
+                                        Style="{StaticResource ButtonPrimary}"
+                                        VerticalAlignment="Bottom"
+                                        Padding="16,0" Height="32"
+                                        Command="{Binding SaveProfileCommand}"/>
+                            </Grid>
+
+                            <!-- 連線狀態輸出 -->
+                            <StackPanel Grid.Row="10" Grid.Column="0" Grid.ColumnSpan="3">
+                                <TextBlock Text="{Binding ServerVersionDisplay}"
+                                           FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource PrimaryBrush}"
+                                           Margin="0,0,0,4"/>
+                                <TextBlock Text="{Binding ConnectionStatusMessage}"
+                                           FontSize="12" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource PrimaryTextBrush}"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
                 </StackPanel>
             </hc:Card>
 
