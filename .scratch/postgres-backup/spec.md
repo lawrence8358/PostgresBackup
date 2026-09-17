@@ -1,6 +1,6 @@
 # PostgresBackup — 系統規格書 (Spec)
 
-狀態: `ready-for-agent`
+狀態: `done` (已完成)
 
 ## Problem Statement
 
