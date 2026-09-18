@@ -198,8 +198,31 @@ CLI 工具名稱為 `pgbackup`（本機專案可直接以 `dotnet run --project 
 
 ### 4.1 工具狀態診斷 (`check-tools`)
 ```powershell
-pgbackup check-tools [--pg-bin-path <目錄路徑>]
+pgbackup check-tools [選項]
 ```
+#### 核心參數表：
+| 參數 | 簡寫 | 說明 | 範例 |
+| :--- | :---: | :--- | :--- |
+| `--pg-bin-path` | | 官方工具 bin 目錄路徑 | `--pg-bin-path "C:\Tools\pgsql\bin"` |
+| `--host` | `-H` | PostgreSQL 主機位址（提供連線資訊時，會一併檢驗伺服器版本相容性） | `-H localhost` |
+| `--port` | `-P` | 連接埠 (預設 5432) | `-P 5432` |
+| `--database` | `-d` | 資料庫名稱 | `-d my_database` |
+| `--username` | `-u` | 資料庫使用者 | `-u postgres` |
+| `--password` | `-p` | 資料庫密碼 (安全環境變數傳遞) | `-p "YourPassword123!"` |
+| `--connection-string` | `-s` | 完整連線字串，用於伺服器版本相容性檢查 | `-s "Host=localhost;Database=db;..."` |
+| `--json` | | 以 JSON 格式輸出診斷報告，便於腳本化健康檢查 | `--json` |
+
+#### 常用範例：
+1. **僅檢查本機工具是否就緒**：
+   ```powershell
+   pgbackup check-tools --pg-bin-path "C:\Tools\pgsql\bin"
+   ```
+2. **同時檢驗客戶端與伺服器版本相容性**：
+   ```powershell
+   pgbackup check-tools -H localhost -d my_database -u postgres -p "YourPassword123!" --pg-bin-path "C:\Tools\pgsql\bin"
+   ```
+
+> 命令成功時回傳結束代碼 `0`，工具未就緒或版本不相容時回傳非零值，可直接用於排程腳本與 CI 流程的前置檢查。
 
 ### 4.2 備份作業 (`backup`)
 ```powershell
@@ -208,6 +231,7 @@ pgbackup backup [選項]
 #### 核心參數表：
 | 參數 | 簡寫 | 說明 | 範例 |
 | :--- | :---: | :--- | :--- |
+| `--profile` | | 指定已儲存之連線設定檔名稱或識別碼 | `--profile "正式環境"` |
 | `--host` | `-H` | PostgreSQL 主機位址 | `-H localhost` |
 | `--port` | `-P` | 連接埠 (預設 5432) | `-P 5432` |
 | `--database` | `-d` | 目標資料庫名稱 | `-d my_database` |
@@ -218,6 +242,7 @@ pgbackup backup [選項]
 | `--schema` | `-n` | 指定綱要 (可重複使用) | `-n public -n hangfire` |
 | `--table` | `-t` | 指定資料表 (可重複使用) | `-t "public.Quote"` |
 | `--output-dir` | `-o` | 輸出存放目錄 | `-o "D:\Backups"` |
+| `--output-file` | | 直接指定輸出檔案完整路徑，覆寫自動產生的檔名 | `--output-file "D:\Backups\nightly.dump"` |
 | `--pg-bin-path` | | 官方工具 bin 目錄路徑 | `--pg-bin-path "C:\Tools\pgsql\bin"` |
 | `--log` | | 額外輸出詳細日誌檔路徑 | `--log "D:\Backups\run.log"` |
 
@@ -235,10 +260,43 @@ pgbackup backup [選項]
 ```powershell
 pgbackup restore [選項]
 ```
+#### 核心參數表：
+| 參數 | 簡寫 | 說明 | 範例 |
+| :--- | :---: | :--- | :--- |
+| `--file` | `-f` | **必填。** 來源備份檔案路徑 (`.dump` 或 `.sql`) | `-f "D:\Backups\my_database.dump"` |
+| `--profile` | | 指定已儲存之連線設定檔名稱或識別碼 | `--profile "正式環境"` |
+| `--host` | `-H` | PostgreSQL 主機位址 | `-H localhost` |
+| `--port` | `-P` | 連接埠 (預設 5432) | `-P 5432` |
+| `--database` | `-d` | 目標資料庫名稱 | `-d my_database` |
+| `--username` | `-u` | 資料庫使用者 | `-u postgres` |
+| `--password` | `-p` | 資料庫密碼 (安全環境變數傳遞) | `-p "YourPassword123!"` |
+| `--mode` | `-m` | 還原模式 (`normal`, `clean`, `data`)，預設 `normal` | `-m clean` |
+| `--no-snapshot` | | **關閉**還原前安全快照（預設為自動啟用） | `--no-snapshot` |
+| `--yes` | `-y` | 自動同意高危險操作確認，不跳出互動提示 | `--yes` |
+| `--pg-bin-path` | | 官方工具 bin 目錄路徑 | `--pg-bin-path "C:\Tools\pgsql\bin"` |
+| `--log` | | 額外輸出詳細日誌檔路徑 | `--log "D:\Backups\restore.log"` |
+
+> **注意**：還原前安全快照為**預設啟用**，無須額外加上任何參數；`--no-snapshot` 是用來「關閉」它的。關閉快照等同於放棄還原後的回復能力，除非目標資料庫可隨意丟棄，否則請勿使用。
+
+#### 還原模式說明：
+| 模式 | 對應官方參數 | 說明 |
+| :--- | :--- | :--- |
+| `normal` | （無） | 一般還原，建立遺漏物件，不刪除既有物件 |
+| `clean` | `--clean --create` | 清除並重建，覆寫既有物件 |
+| `data` | `--data-only` | 僅寫入資料，不變更結構 |
+
 #### 常用範例：
-1. **執行安全還原 (自動觸發前置快照，需加 `--confirm` 確認)**：
+1. **執行安全還原 (自動建立前置快照，並於覆寫前互動確認)**：
    ```powershell
-   pgbackup restore -f "D:\Backups\my_database_20260917.dump" -H localhost -d my_database -u postgres -p "YourPassword123!" --snapshot --confirm --pg-bin-path "C:\Tools\pgsql\bin"
+   pgbackup restore -f "D:\Backups\my_database_20260917.dump" -H localhost -d my_database -u postgres -p "YourPassword123!" --pg-bin-path "C:\Tools\pgsql\bin"
+   ```
+2. **無人值守還原 (排程腳本用，略過互動確認但仍保留安全快照)**：
+   ```powershell
+   pgbackup restore -f "D:\Backups\my_database_20260917.dump" -H localhost -d my_database -u postgres -p "YourPassword123!" --yes --pg-bin-path "C:\Tools\pgsql\bin"
+   ```
+3. **清除並重建模式還原 (完整覆寫目標資料庫)**：
+   ```powershell
+   pgbackup restore -f "D:\Backups\my_database_20260917.dump" -H localhost -d my_database -u postgres -p "YourPassword123!" -m clean --yes --pg-bin-path "C:\Tools\pgsql\bin"
    ```
 
 ---
