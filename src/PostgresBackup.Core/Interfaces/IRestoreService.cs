@@ -12,8 +12,6 @@ public interface IRestoreService
     /// </summary>
     Task<RestoreResult> RestoreAsync(
         RestoreOptions options,
-        string? toolExecutablePath = null,
-        string? pgDumpPath = null,
         Action<string>? onLogLine = null,
         CancellationToken ct = default);
 }

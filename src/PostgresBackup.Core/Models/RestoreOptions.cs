@@ -26,6 +26,11 @@ public class RestoreOptions
     public string? SnapshotDirectory { get; set; }
 
     /// <summary>
+    /// 自訂 PostgreSQL 客戶端工具 (bin) 目錄路徑（若未指定則由工具偵測服務自動探索）
+    /// </summary>
+    public string? ClientToolDirectory { get; set; }
+
+    /// <summary>
     /// 自動根據來源檔案副檔名推斷備份格式
     /// </summary>
     public static BackupFormat DetectFormatFromFilePath(string filePath)

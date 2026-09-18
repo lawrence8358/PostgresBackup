@@ -6,26 +6,26 @@ namespace PostgresBackup.Core.Tests.Services;
 
 public class RestoreServiceTests
 {
-    private class TestToolRunner : IClientToolRunner
+    private class TestProcessRunner : IProcessRunner
     {
         public bool FailSnapshot { get; set; }
         public bool FailRestore { get; set; }
         public int CallCount { get; private set; }
         public List<string> ExecutablesCalled { get; } = [];
 
-        public Task<ProcessResult> RunToolAsync(
-            string executablePath,
+        public Task<ProcessResult> RunAsync(
+            string executable,
             string arguments,
-            string? password = null,
+            IDictionary<string, string?>? environmentVariables = null,
             Action<string>? onOutputLine = null,
             Action<string>? onErrorLine = null,
             CancellationToken ct = default)
         {
             CallCount++;
-            ExecutablesCalled.Add(executablePath);
+            ExecutablesCalled.Add(executable);
 
             // 判斷是否為快照 (pg_dump)
-            if (executablePath.Contains("pg_dump", StringComparison.OrdinalIgnoreCase))
+            if (executable.Contains("pg_dump", StringComparison.OrdinalIgnoreCase))
             {
                 if (FailSnapshot)
                 {
@@ -83,10 +83,11 @@ public class RestoreServiceTests
 
         try
         {
-            var runner = new TestToolRunner { FailSnapshot = true };
+            var runner = new TestProcessRunner { FailSnapshot = true };
             var detector = new TestToolDetector();
             var historyRepo = new SqliteBackupHistoryRepository(":memory:");
-            var service = new RestoreService(runner, detector, historyRepo);
+            var backupService = new BackupService(runner, detector, historyRepo);
+            var service = new RestoreService(runner, detector, backupService, historyRepo);
 
             var options = new RestoreOptions
             {
@@ -131,10 +132,11 @@ public class RestoreServiceTests
 
         try
         {
-            var runner = new TestToolRunner { FailSnapshot = false, FailRestore = false };
+            var runner = new TestProcessRunner { FailSnapshot = false, FailRestore = false };
             var detector = new TestToolDetector();
             var historyRepo = new SqliteBackupHistoryRepository(":memory:");
-            var service = new RestoreService(runner, detector, historyRepo);
+            var backupService = new BackupService(runner, detector, historyRepo);
+            var service = new RestoreService(runner, detector, backupService, historyRepo);
 
             var options = new RestoreOptions
             {

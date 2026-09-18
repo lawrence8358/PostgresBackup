@@ -26,7 +26,6 @@ public partial class App : Application
         services.AddSingleton<IToolDetectionService, ToolDetectionService>();
         services.AddSingleton<ICredentialStorage, WindowsCredentialStorage>();
         services.AddSingleton<IConnectionProfileRepository, JsonConnectionProfileRepository>();
-        services.AddSingleton<IClientToolRunner, ClientToolRunner>();
         services.AddSingleton<IBackupHistoryRepository, SqliteBackupHistoryRepository>();
         services.AddSingleton<IBackupService, BackupService>();
         services.AddSingleton<IRestoreService, RestoreService>();

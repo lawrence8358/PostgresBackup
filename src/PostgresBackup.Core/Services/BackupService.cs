@@ -9,23 +9,22 @@ namespace PostgresBackup.Core.Services;
 /// </summary>
 public class BackupService : IBackupService
 {
-    private readonly IClientToolRunner _toolRunner;
+    private readonly IProcessRunner _processRunner;
     private readonly IToolDetectionService _toolDetector;
     private readonly IBackupHistoryRepository? _historyRepo;
 
     public BackupService(
-        IClientToolRunner toolRunner,
+        IProcessRunner processRunner,
         IToolDetectionService toolDetector,
         IBackupHistoryRepository? historyRepo = null)
     {
-        _toolRunner = toolRunner;
+        _processRunner = processRunner;
         _toolDetector = toolDetector;
         _historyRepo = historyRepo;
     }
 
     public async Task<BackupResult> BackupAsync(
         BackupOptions options,
-        string? pgDumpPath = null,
         Action<string>? onLogLine = null,
         CancellationToken ct = default)
     {
@@ -33,18 +32,15 @@ public class BackupService : IBackupService
 
         var stopwatch = Stopwatch.StartNew();
 
-        // 1. 驗證客戶端工具路徑
-        if (string.IsNullOrWhiteSpace(pgDumpPath))
+        // 1. 驗證與解析客戶端工具路徑
+        var detection = await _toolDetector.DetectAsync(options.ClientToolDirectory, ct);
+        if (!detection.IsReady || string.IsNullOrWhiteSpace(detection.PgDumpPath))
         {
-            var detection = await _toolDetector.DetectAsync(null, ct);
-            if (!detection.IsReady || string.IsNullOrWhiteSpace(detection.PgDumpPath))
-            {
-                var errMsg = "未偵測到 PostgreSQL 客戶端工具 (pg_dump)！請先於設定頁面確認安裝或指定工具目錄。";
-                onLogLine?.Invoke($"[ERROR] {errMsg}");
-                return BackupResult.Failure(errMsg, -1, TimeSpan.Zero, string.Empty);
-            }
-            pgDumpPath = detection.PgDumpPath;
+            var errMsg = "未偵測到 PostgreSQL 客戶端工具 (pg_dump)！請先於設定頁面確認安裝或指定工具目錄。";
+            onLogLine?.Invoke($"[ERROR] {errMsg}");
+            return BackupResult.Failure(errMsg, -1, TimeSpan.Zero, string.Empty);
         }
+        var pgDumpPath = detection.PgDumpPath;
 
         // 2. 確保輸出目錄存在
         if (string.IsNullOrWhiteSpace(options.OutputDirectory))
@@ -70,10 +66,16 @@ public class BackupService : IBackupService
         onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] 執行工具: {pgDumpPath}");
 
         // 4. 執行 pg_dump 並串流捕獲標準輸出與錯誤輸出
-        var processResult = await _toolRunner.RunToolAsync(
+        var envVars = new Dictionary<string, string?>();
+        if (!string.IsNullOrEmpty(options.Connection.Password))
+        {
+            envVars["PGPASSWORD"] = options.Connection.Password;
+        }
+
+        var processResult = await _processRunner.RunAsync(
             pgDumpPath,
             arguments,
-            options.Connection.Password,
+            envVars,
             onOutputLine: line => onLogLine?.Invoke($"[pg_dump] {line}"),
             onErrorLine: line => onLogLine?.Invoke($"[pg_dump] {line}"),
             ct: ct);
@@ -96,7 +98,7 @@ public class BackupService : IBackupService
                     await _historyRepo.AddRecordAsync(new BackupRecord
                     {
                         Timestamp = DateTimeOffset.UtcNow,
-                        OperationType = BackupOperationType.Backup,
+                        OperationType = options.OperationType,
                         DatabaseName = options.Connection.Database,
                         FilePath = targetFilePath,
                         Format = options.Format,
@@ -138,7 +140,7 @@ public class BackupService : IBackupService
                     await _historyRepo.AddRecordAsync(new BackupRecord
                     {
                         Timestamp = DateTimeOffset.UtcNow,
-                        OperationType = BackupOperationType.Backup,
+                        OperationType = options.OperationType,
                         DatabaseName = options.Connection.Database,
                         FilePath = targetFilePath,
                         Format = options.Format,

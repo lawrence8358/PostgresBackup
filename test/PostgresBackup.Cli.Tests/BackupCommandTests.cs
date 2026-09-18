@@ -18,7 +18,6 @@ public class BackupCommandTests
 
         mockBackupService.Setup(b => b.BackupAsync(
                 It.IsAny<BackupOptions>(),
-                It.IsAny<string?>(),
                 It.IsAny<Action<string>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(BackupResult.Success(
@@ -48,7 +47,6 @@ public class BackupCommandTests
 
         mockBackupService.Setup(b => b.BackupAsync(
                 It.IsAny<BackupOptions>(),
-                It.IsAny<string?>(),
                 It.IsAny<Action<string>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(BackupResult.Failure(

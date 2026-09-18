@@ -13,6 +13,8 @@ public class BackupOptions
 
     public BackupScope Scope { get; set; } = BackupScope.FullDatabase;
 
+    public BackupOperationType OperationType { get; set; } = BackupOperationType.Backup;
+
     public List<string> Schemas { get; set; } = [];
 
     public List<string> Tables { get; set; } = [];
@@ -20,6 +22,11 @@ public class BackupOptions
     public string OutputDirectory { get; set; } = string.Empty;
 
     public string? CustomFileName { get; set; }
+
+    /// <summary>
+    /// 自訂 PostgreSQL 客戶端工具 (bin) 目錄路徑（若未指定則由工具偵測服務自動探索）
+    /// </summary>
+    public string? ClientToolDirectory { get; set; }
 
     /// <summary>
     /// 依命名規範產生檔案名稱：{database}_{yyyyMMddHHmmss}.{dump|sql}

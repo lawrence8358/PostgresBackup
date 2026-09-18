@@ -23,8 +23,6 @@ public class RestoreCommandTests
 
             mockRestoreService.Setup(r => r.RestoreAsync(
                     It.IsAny<RestoreOptions>(),
-                    It.IsAny<string?>(),
-                    It.IsAny<string?>(),
                     It.IsAny<Action<string>?>(),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(RestoreResult.Success(TimeSpan.FromSeconds(2), "-d testdb"));
@@ -62,8 +60,6 @@ public class RestoreCommandTests
 
             mockRestoreService.Setup(r => r.RestoreAsync(
                     It.IsAny<RestoreOptions>(),
-                    It.IsAny<string?>(),
-                    It.IsAny<string?>(),
                     It.IsAny<Action<string>?>(),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(RestoreResult.Failure("Snapshot failed, aborted", 1, TimeSpan.FromSeconds(1), ""));

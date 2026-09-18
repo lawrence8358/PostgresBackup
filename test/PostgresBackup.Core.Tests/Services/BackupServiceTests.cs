@@ -6,7 +6,7 @@ namespace PostgresBackup.Core.Tests.Services;
 
 public class BackupServiceTests
 {
-    private class FakeClientToolRunner : IClientToolRunner
+    private class FakeProcessRunner : IProcessRunner
     {
         public ProcessResult ResultToReturn { get; set; } = new(0, "Export completed", string.Empty);
         public string? CapturedArguments { get; private set; }
@@ -14,16 +14,19 @@ public class BackupServiceTests
         public bool CreateFileOnRun { get; set; } = true;
         public string? FilePathToCreate { get; set; }
 
-        public Task<ProcessResult> RunToolAsync(
-            string executablePath,
+        public Task<ProcessResult> RunAsync(
+            string executable,
             string arguments,
-            string? password = null,
+            IDictionary<string, string?>? environmentVariables = null,
             Action<string>? onOutputLine = null,
             Action<string>? onErrorLine = null,
             CancellationToken ct = default)
         {
             CapturedArguments = arguments;
-            CapturedPassword = password;
+            if (environmentVariables != null && environmentVariables.TryGetValue("PGPASSWORD", out var pass))
+            {
+                CapturedPassword = pass;
+            }
 
             onOutputLine?.Invoke("pg_dump: reading schemas");
             onErrorLine?.Invoke("pg_dump: dumping contents");
@@ -64,7 +67,7 @@ public class BackupServiceTests
 
         try
         {
-            var fakeRunner = new FakeClientToolRunner();
+            var fakeRunner = new FakeProcessRunner();
             var fakeDetector = new FakeToolDetector();
             var service = new BackupService(fakeRunner, fakeDetector);
 
@@ -108,7 +111,7 @@ public class BackupServiceTests
 
         try
         {
-            var fakeRunner = new FakeClientToolRunner
+            var fakeRunner = new FakeProcessRunner
             {
                 ResultToReturn = new ProcessResult(1, string.Empty, "FATAL: database 'unknown_db' does not exist"),
                 CreateFileOnRun = false
@@ -140,7 +143,7 @@ public class BackupServiceTests
     [Fact]
     public async Task BackupAsync_WhenToolNotFound_ReturnsFailureWithoutRunning()
     {
-        var fakeRunner = new FakeClientToolRunner();
+        var fakeRunner = new FakeProcessRunner();
         var fakeDetector = new FakeToolDetector { ResultToReturn = ToolDetectionResult.CreateNotFound() };
         var service = new BackupService(fakeRunner, fakeDetector);
 

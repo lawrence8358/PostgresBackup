@@ -163,7 +163,8 @@ public static class RestoreCommand
                 TargetDatabase = targetDb,
                 Format = format,
                 Mode = mode,
-                CreatePreRestoreSnapshot = !noSnapshot
+                CreatePreRestoreSnapshot = !noSnapshot,
+                ClientToolDirectory = pgBinPath
             };
 
             StreamWriter? logWriter = null;
@@ -191,21 +192,7 @@ public static class RestoreCommand
             Console.WriteLine(" PostgresBackup CLI — 安全還原作業");
             Console.WriteLine("=================================================");
 
-            string? explicitToolPath = null;
-            string? explicitDumpPath = null;
-            if (!string.IsNullOrWhiteSpace(pgBinPath))
-            {
-                explicitDumpPath = Path.Combine(pgBinPath, "pg_dump.exe");
-                explicitToolPath = format == BackupFormat.Custom
-                    ? Path.Combine(pgBinPath, "pg_restore.exe")
-                    : Path.Combine(pgBinPath, "psql.exe");
-            }
-
-            var result = await restoreService.RestoreAsync(
-                options,
-                explicitToolPath,
-                explicitDumpPath,
-                OnLog);
+            var result = await restoreService.RestoreAsync(options, OnLog);
 
             logWriter?.Dispose();
 

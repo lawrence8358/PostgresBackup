@@ -14,6 +14,8 @@ public class ProcessRunner : IProcessRunner
         string executable,
         string arguments,
         IDictionary<string, string?>? environmentVariables = null,
+        Action<string>? onOutputLine = null,
+        Action<string>? onErrorLine = null,
         CancellationToken ct = default)
     {
         var startInfo = new ProcessStartInfo
@@ -56,6 +58,7 @@ public class ProcessRunner : IProcessRunner
                 {
                     outputBuilder.AppendLine(e.Data);
                 }
+                onOutputLine?.Invoke(e.Data);
             }
         };
 
@@ -67,6 +70,7 @@ public class ProcessRunner : IProcessRunner
                 {
                     errorBuilder.AppendLine(e.Data);
                 }
+                onErrorLine?.Invoke(e.Data);
             }
         };
 
@@ -107,4 +111,11 @@ public class ProcessRunner : IProcessRunner
             return new ProcessResult(-1, string.Empty, $"執行處理序時發生例外: {ex.Message}");
         }
     }
+
+    public Task<ProcessResult> RunAsync(
+        string executable,
+        string arguments,
+        IDictionary<string, string?>? environmentVariables,
+        CancellationToken ct) =>
+        RunAsync(executable, arguments, environmentVariables, null, null, ct);
 }

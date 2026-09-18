@@ -14,16 +14,13 @@ public partial class BackupViewModel : ObservableObject
 {
     private readonly IBackupService _backupService;
     private readonly IConnectionProfileRepository _profileRepo;
-    private readonly IToolDetectionService _toolDetector;
 
     public BackupViewModel(
         IBackupService backupService,
-        IConnectionProfileRepository profileRepo,
-        IToolDetectionService toolDetector)
+        IConnectionProfileRepository profileRepo)
     {
         _backupService = backupService;
         _profileRepo = profileRepo;
-        _toolDetector = toolDetector;
 
         var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         _outputDirectory = Path.Combine(docs, "PostgresBackups");

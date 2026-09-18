@@ -9,24 +9,25 @@ namespace PostgresBackup.Core.Services;
 /// </summary>
 public class RestoreService : IRestoreService
 {
-    private readonly IClientToolRunner _toolRunner;
+    private readonly IProcessRunner _processRunner;
     private readonly IToolDetectionService _toolDetector;
+    private readonly IBackupService? _backupService;
     private readonly IBackupHistoryRepository? _historyRepo;
 
     public RestoreService(
-        IClientToolRunner toolRunner,
+        IProcessRunner processRunner,
         IToolDetectionService toolDetector,
+        IBackupService? backupService = null,
         IBackupHistoryRepository? historyRepo = null)
     {
-        _toolRunner = toolRunner;
+        _processRunner = processRunner;
         _toolDetector = toolDetector;
+        _backupService = backupService;
         _historyRepo = historyRepo;
     }
 
     public async Task<RestoreResult> RestoreAsync(
         RestoreOptions options,
-        string? toolExecutablePath = null,
-        string? pgDumpPath = null,
         Action<string>? onLogLine = null,
         CancellationToken ct = default)
     {
@@ -49,7 +50,7 @@ public class RestoreService : IRestoreService
         }
 
         // 2. 尋找與驗證工具路徑
-        var detection = await _toolDetector.DetectAsync(null, ct);
+        var detection = await _toolDetector.DetectAsync(options.ClientToolDirectory, ct);
         if (!detection.IsReady)
         {
             var errMsg = "未偵測到 PostgreSQL 官方客戶端工具！請先於設定頁面確認安裝。";
@@ -57,24 +58,16 @@ public class RestoreService : IRestoreService
             return RestoreResult.Failure(errMsg, -1, TimeSpan.Zero, string.Empty);
         }
 
+        var toolExecutablePath = options.Format == BackupFormat.Custom
+            ? detection.PgRestorePath
+            : detection.PsqlPath;
+
         if (string.IsNullOrWhiteSpace(toolExecutablePath))
         {
-            toolExecutablePath = options.Format == BackupFormat.Custom
-                ? detection.PgRestorePath
-                : detection.PsqlPath;
-
-            if (string.IsNullOrWhiteSpace(toolExecutablePath))
-            {
-                var toolName = options.Format == BackupFormat.Custom ? "pg_restore" : "psql";
-                var errMsg = $"未找到執行所需之官方工具: {toolName}";
-                onLogLine?.Invoke($"[ERROR] {errMsg}");
-                return RestoreResult.Failure(errMsg, -1, TimeSpan.Zero, string.Empty);
-            }
-        }
-
-        if (string.IsNullOrWhiteSpace(pgDumpPath))
-        {
-            pgDumpPath = detection.PgDumpPath;
+            var toolName = options.Format == BackupFormat.Custom ? "pg_restore" : "psql";
+            var errMsg = $"未找到執行所需之官方工具: {toolName}";
+            onLogLine?.Invoke($"[ERROR] {errMsg}");
+            return RestoreResult.Failure(errMsg, -1, TimeSpan.Zero, string.Empty);
         }
 
         var targetDb = !string.IsNullOrWhiteSpace(options.TargetDatabase)
@@ -83,7 +76,7 @@ public class RestoreService : IRestoreService
 
         string? snapshotFilePath = null;
 
-        // 3. 還原前安全快照 (Pre-Restore Snapshot)
+        // 3. 還原前安全快照 (Pre-Restore Snapshot) — 透過 BackupService 作業模組安全委任
         if (options.CreatePreRestoreSnapshot)
         {
             onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [SAFETY] 正在對目標資料庫 '{targetDb}' 執行還原前安全快照 (Pre-Restore Snapshot)...");
@@ -105,7 +98,6 @@ public class RestoreService : IRestoreService
             }
 
             var snapshotFileName = $"{targetDb}_snapshot_{DateTime.Now:yyyyMMddHHmmss}.dump";
-            snapshotFilePath = Path.Combine(snapshotDir, snapshotFileName);
 
             var snapshotOptions = new BackupOptions
             {
@@ -114,77 +106,32 @@ public class RestoreService : IRestoreService
                 Mode = BackupMode.SchemaAndData,
                 Scope = BackupScope.FullDatabase,
                 OutputDirectory = snapshotDir,
-                CustomFileName = snapshotFileName
+                CustomFileName = snapshotFileName,
+                ClientToolDirectory = options.ClientToolDirectory,
+                OperationType = BackupOperationType.PreRestoreSnapshot
             };
 
-            var snapshotArgs = BackupArgumentsBuilder.Build(snapshotOptions, snapshotFilePath);
-
-            if (string.IsNullOrWhiteSpace(pgDumpPath))
+            if (_backupService == null)
             {
-                var errMsg = "安全快照失敗：未找到 pg_dump 工具，無法執行安全快照！為保護既有資料庫，已強制終止還原作業。";
+                var errMsg = "安全快照失敗：未注入備份作業服務 (IBackupService)，為保護既有資料庫，已強制終止還原作業。";
                 onLogLine?.Invoke($"[CRITICAL ABORT] {errMsg}");
                 return RestoreResult.Failure(errMsg, -1, stopwatch.Elapsed, string.Empty);
             }
 
-            var snapshotProc = await _toolRunner.RunToolAsync(
-                pgDumpPath,
-                snapshotArgs,
-                options.Connection.Password,
-                onOutputLine: line => onLogLine?.Invoke($"[snapshot] {line}"),
-                onErrorLine: line => onLogLine?.Invoke($"[snapshot] {line}"),
+            var snapshotResult = await _backupService.BackupAsync(
+                snapshotOptions,
+                onLogLine: line => onLogLine?.Invoke($"[snapshot] {line}"),
                 ct: ct);
 
-            if (snapshotProc.ExitCode != 0 || !File.Exists(snapshotFilePath))
+            if (!snapshotResult.IsSuccess)
             {
-                var errMsg = $"安全快照建立失敗 (ExitCode: {snapshotProc.ExitCode}): {snapshotProc.ErrorMessage ?? "無法產生快照檔案"}。為保護既有資料庫免受破壞，系統已強制終止還原作業！";
+                var errMsg = $"安全快照建立失敗 (ExitCode: {snapshotResult.ExitCode}): {snapshotResult.ErrorMessage ?? "無法產生快照檔案"}。為保護既有資料庫免受破壞，系統已強制終止還原作業！";
                 onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [CRITICAL ABORT] {errMsg}");
-
-                if (_historyRepo != null)
-                {
-                    try
-                    {
-                        await _historyRepo.AddRecordAsync(new BackupRecord
-                        {
-                            Timestamp = DateTimeOffset.UtcNow,
-                            OperationType = BackupOperationType.PreRestoreSnapshot,
-                            DatabaseName = targetDb,
-                            FilePath = snapshotFilePath,
-                            Format = BackupFormat.Custom,
-                            FileSizeBytes = 0,
-                            DurationMs = (long)stopwatch.Elapsed.TotalMilliseconds,
-                            Status = BackupStatus.Failed,
-                            ErrorMessage = errMsg,
-                            Arguments = snapshotArgs
-                        }, ct);
-                    }
-                    catch { }
-                }
-
-                return RestoreResult.Failure(errMsg, snapshotProc.ExitCode, stopwatch.Elapsed, snapshotArgs);
+                return RestoreResult.Failure(errMsg, snapshotResult.ExitCode, stopwatch.Elapsed, snapshotResult.Arguments);
             }
 
-            var snapshotSize = new FileInfo(snapshotFilePath).Length;
-            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [SAFETY SUCCESS] 安全快照已建立完畢（大小: {snapshotSize} 位元組）");
-
-            if (_historyRepo != null)
-            {
-                try
-                {
-                    await _historyRepo.AddRecordAsync(new BackupRecord
-                    {
-                        Timestamp = DateTimeOffset.UtcNow,
-                        OperationType = BackupOperationType.PreRestoreSnapshot,
-                        DatabaseName = targetDb,
-                        FilePath = snapshotFilePath,
-                        Format = BackupFormat.Custom,
-                        FileSizeBytes = snapshotSize,
-                        DurationMs = (long)stopwatch.Elapsed.TotalMilliseconds,
-                        Status = BackupStatus.Success,
-                        Arguments = snapshotArgs
-                    }, ct);
-                }
-                catch { }
-            }
+            snapshotFilePath = snapshotResult.OutputFilePath;
+            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [SAFETY SUCCESS] 安全快照已建立完畢（大小: {snapshotResult.FileSizeBytes} 位元組）");
         }
 
         // 4. 執行還原作業
@@ -195,10 +142,16 @@ public class RestoreService : IRestoreService
         onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] 來源檔案: {options.SourceFilePath}");
         onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] 還原模式: {options.Mode}");
 
-        var restoreProc = await _toolRunner.RunToolAsync(
+        var envVars = new Dictionary<string, string?>();
+        if (!string.IsNullOrEmpty(options.Connection.Password))
+        {
+            envVars["PGPASSWORD"] = options.Connection.Password;
+        }
+
+        var restoreProc = await _processRunner.RunAsync(
             toolExecutablePath,
             restoreArgs,
-            options.Connection.Password,
+            envVars,
             onOutputLine: line => onLogLine?.Invoke($"[{toolNameDisplay}] {line}"),
             onErrorLine: line => onLogLine?.Invoke($"[{toolNameDisplay}] {line}"),
             ct: ct);

@@ -14,16 +14,13 @@ public partial class RestoreViewModel : ObservableObject
 {
     private readonly IRestoreService _restoreService;
     private readonly IConnectionProfileRepository _profileRepo;
-    private readonly IToolDetectionService _toolDetector;
 
     public RestoreViewModel(
         IRestoreService restoreService,
-        IConnectionProfileRepository profileRepo,
-        IToolDetectionService toolDetector)
+        IConnectionProfileRepository profileRepo)
     {
         _restoreService = restoreService;
         _profileRepo = profileRepo;
-        _toolDetector = toolDetector;
     }
 
     public ObservableCollection<ConnectionProfile> Profiles { get; } = [];

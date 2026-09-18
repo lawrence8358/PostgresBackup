@@ -12,7 +12,6 @@ public interface IBackupService
     /// </summary>
     Task<BackupResult> BackupAsync(
         BackupOptions options,
-        string? pgDumpPath = null,
         Action<string>? onLogLine = null,
         CancellationToken ct = default);
 }

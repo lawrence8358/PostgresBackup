@@ -186,7 +186,8 @@ public static class BackupCommand
                 Schemas = schemaList,
                 Tables = tableList,
                 OutputDirectory = outputDir ?? Path.Combine(Environment.CurrentDirectory, "backups"),
-                CustomFileName = outputFile
+                CustomFileName = outputFile,
+                ClientToolDirectory = pgBinPath
             };
 
             StreamWriter? logWriter = null;
@@ -219,13 +220,7 @@ public static class BackupCommand
             Console.WriteLine(" PostgresBackup CLI — 備份作業");
             Console.WriteLine("=================================================");
 
-            string? explicitDumpPath = null;
-            if (!string.IsNullOrWhiteSpace(pgBinPath))
-            {
-                explicitDumpPath = Path.Combine(pgBinPath, "pg_dump.exe");
-            }
-
-            var result = await backupService.BackupAsync(options, explicitDumpPath, OnLog);
+            var result = await backupService.BackupAsync(options, OnLog);
 
             logWriter?.Dispose();
 
