@@ -13,31 +13,32 @@
         <converters:ToolStatusToBrushConverter x:Key="ToolStatusToBrushConverter"/>
     </UserControl.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="28,24,28,28" MaxWidth="850">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="24,14,24,16" MaxWidth="850">
 
             <!-- 頁面標題 -->
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,24">
-                <Border Width="4" Height="24" Background="{DynamicResource PrimaryBrush}" CornerRadius="2" Margin="0,0,12,0"/>
-                <TextBlock Text="{l:Loc Settings_Title}" FontSize="22" FontWeight="SemiBold"
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                <Border Width="4" Height="22" Background="{DynamicResource PrimaryBrush}" CornerRadius="2" Margin="0,0,10,0"/>
+                <TextBlock Text="{l:Loc Settings_Title}" FontSize="20" FontWeight="SemiBold"
                            Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
             </StackPanel>
 
             <!-- ── 卡片 1: PostgreSQL 客戶端工具 ── -->
-            <hc:Card Margin="0,0,0,24" Padding="0" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+            <hc:Card Margin="0,0,0,10" Padding="0" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
                 <StackPanel>
                     <!-- 卡片標頭 -->
-                    <Border Background="{DynamicResource PrimaryBrush}" CornerRadius="4,4,0,0" Padding="18,12">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="🔧 " FontSize="14"/>
+                    <Border Background="{DynamicResource PrimaryBrush}" CornerRadius="4,4,0,0" Padding="14,8">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Path Data="{StaticResource IconToolsGeometry}" Fill="White"
+                                  Width="14" Height="14" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
                             <TextBlock Text="{l:Loc Settings_ClientTools_Title}"
-                                       FontSize="14" FontWeight="SemiBold" Foreground="White"/>
+                                       FontSize="14" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
-                    <StackPanel Margin="20,18,20,20">
+                    <StackPanel Margin="16,8,16,10">
                         <!-- 狀態指示列 -->
-                        <Border Background="#0D000000" CornerRadius="6" Padding="16,12" Margin="0,0,0,16">
+                        <Border Background="#0D000000" CornerRadius="6" Padding="10,6" Margin="0,0,0,6">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -48,18 +49,18 @@
                                 <!-- 狀態燈號 Badge -->
                                 <Border Grid.Column="0"
                                         Background="{Binding ToolStatus, Converter={StaticResource ToolStatusToBrushConverter}}"
-                                        CornerRadius="4" Padding="10,4" Margin="0,0,14,0"
+                                        CornerRadius="4" Padding="8,3" Margin="0,0,12,0"
                                         VerticalAlignment="Center">
                                     <TextBlock Text="{Binding ToolResult.Status}"
-                                               FontWeight="Bold" Foreground="White" FontSize="12"/>
+                                               FontWeight="Bold" Foreground="White" FontSize="11"/>
                                 </Border>
 
-                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,10,0">
                                     <TextBlock Text="{Binding StatusMessage}"
-                                               FontWeight="SemiBold" FontSize="13"
+                                               FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap"
                                                Foreground="{DynamicResource PrimaryTextBrush}"/>
                                     <TextBlock Text="{Binding SourceDisplay, StringFormat='來源: {0}'}"
-                                               FontSize="11" Margin="0,2,0,0"
+                                               FontSize="11" Margin="0,1,0,0" TextTrimming="CharacterEllipsis"
                                                Foreground="{DynamicResource SecondaryTextBrush}"/>
                                 </StackPanel>
 
@@ -69,78 +70,60 @@
                                         Style="{StaticResource ButtonPrimary}"
                                         Command="{Binding DetectToolsCommand}"
                                         IsEnabled="{Binding IsDetecting, Converter={StaticResource InvertBoolConverter}}"
-                                        Padding="14,6"/>
+                                        Height="30" Padding="12,0"/>
                             </Grid>
                         </Border>
 
-                        <!-- 詳細資訊表格 -->
-                        <Grid Margin="0,0,0,16">
+                        <!-- 詳細工具狀態提示列 (簡潔單行，清楚明確又節省空間) -->
+                        <Grid Margin="0,0,0,4">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="130"/>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="8"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="8"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="8"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="{l:Loc Settings_ToolVersion}"
-                                       Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
-                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ToolResult.Version, TargetNullValue='(未偵測到)'}"
-                                       FontWeight="Medium" Foreground="{DynamicResource PrimaryTextBrush}"/>
-
-                            <TextBlock Grid.Row="2" Grid.Column="0" Text="{l:Loc Settings_PgDumpPath}"
-                                       Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
-                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding ToolResult.PgDumpPath, Mode=OneWay, TargetNullValue='(未偵測到)'}"
-                                     IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"/>
-
-                            <TextBlock Grid.Row="4" Grid.Column="0" Text="{l:Loc Settings_PgRestorePath}"
-                                       Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
-                            <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding ToolResult.PgRestorePath, Mode=OneWay, TargetNullValue='(未偵測到)'}"
-                                     IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"/>
-
-                            <TextBlock Grid.Row="6" Grid.Column="0" Text="psql 路徑"
-                                       Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
-                            <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding ToolResult.PsqlPath, Mode=OneWay, TargetNullValue='(未偵測到)'}"
-                                     IsReadOnly="True" Background="Transparent" BorderThickness="0" Padding="0"/>
+                            <TextBlock Grid.Column="0"
+                                       Text="pg_dump • pg_restore • psql 均已就緒"
+                                       FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding ToolResult.Version, StringFormat='版本: {0}'}"
+                                       FontSize="11" FontWeight="Medium" Foreground="{DynamicResource PrimaryBrush}"
+                                       VerticalAlignment="Center"/>
                         </Grid>
 
                         <!-- 自訂路徑指定列 -->
-                        <Grid Margin="0,0,0,4">
+                        <Grid Margin="0,0,0,2">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="10"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
 
-                            <hc:TextBox Grid.Column="0"
-                                        Text="{Binding CustomPath, UpdateSourceTrigger=PropertyChanged}"
-                                        hc:InfoElement.Title="{l:Loc Settings_CustomPath}"
-                                        hc:InfoElement.Placeholder="{l:Loc Settings_CustomPath_Placeholder}"/>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="{l:Loc Settings_CustomPath}" FontSize="12"
+                                           Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding CustomPath, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="32" VerticalContentAlignment="Center"
+                                         hc:InfoElement.Placeholder="{l:Loc Settings_CustomPath_Placeholder}"/>
+                            </StackPanel>
 
                             <Button Grid.Column="2"
-                                     Content="{l:Loc Settings_Browse}"
-                                     Style="{StaticResource ButtonDefault}"
-                                     Command="{Binding BrowseCustomPathCommand}"
-                                     VerticalAlignment="Bottom"
-                                     Padding="16,0" Height="32"/>
+                                    Content="{l:Loc Settings_Browse}"
+                                    Style="{StaticResource ButtonDefault}"
+                                    Command="{Binding BrowseCustomPathCommand}"
+                                    VerticalAlignment="Bottom"
+                                    Padding="16,0" Height="32"/>
                         </Grid>
 
                         <!-- 官方安裝指引面板 -->
                         <Border Visibility="{Binding ShowGuide, Converter={StaticResource BoolToVisibilityConverter}}"
-                                Margin="0,18,0,0"
+                                Margin="0,10,0,0"
                                 Background="#0A2E7D32"
                                 BorderBrush="{DynamicResource PrimaryBrush}"
                                 BorderThickness="1"
                                 CornerRadius="6"
-                                Padding="18,16">
+                                Padding="14,10">
                             <StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                     <TextBlock Text="ℹ️ " FontSize="14"/>
                                     <TextBlock Text="{l:Loc Settings_Guide_Title}"
                                                FontSize="14" FontWeight="SemiBold"
@@ -150,11 +133,21 @@
                                 <TextBlock Text="{l:Loc Settings_Guide_Intro}"
                                            TextWrapping="Wrap"
                                            Foreground="{DynamicResource PrimaryTextBrush}"
-                                           FontSize="12" LineHeight="18" Margin="0,0,0,14"/>
+                                           FontSize="12" LineHeight="18" Margin="0,0,0,10"/>
+
+                                <!-- 商業授權保證提示 -->
+                                <Border Background="#E8F5E9" BorderBrush="#81C784" BorderThickness="1" CornerRadius="4" Padding="12,6" Margin="0,0,0,10">
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Path Data="{StaticResource IconShieldCheckGeometry}" Fill="#1B5E20"
+                                              Width="14" Height="14" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{l:Loc Settings_Guide_LicenseNotice}"
+                                                   FontSize="11" Foreground="#1B5E20" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Border>
 
                                 <!-- winget 快速安裝 -->
                                 <Border Background="{DynamicResource RegionBrush}"
-                                        CornerRadius="6" Padding="14,10" Margin="0,0,0,10"
+                                        CornerRadius="6" Padding="12,8" Margin="0,0,0,8"
                                         BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
@@ -169,25 +162,35 @@
                                                        FontSize="13" Foreground="{DynamicResource PrimaryBrush}"/>
                                         </StackPanel>
                                         <Button Grid.Column="1"
-                                                Content="{Binding IsCopied, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=CopiedText, FallbackValue='📋 複製命令'}"
+                                                Content="{Binding CopyButtonText}"
                                                 Style="{StaticResource ButtonDefault}"
                                                 Command="{Binding CopyWingetCommand}"
                                                 VerticalAlignment="Center"
-                                                Padding="12,4"/>
+                                                Height="30" Padding="12,0"/>
                                     </Grid>
                                 </Border>
 
                                 <!-- 下載連結按鈕 -->
-                                <WrapPanel Margin="0,4,0,10">
-                                    <Button Content="🔗 PostgreSQL 官方 Windows 下載"
-                                            Style="{StaticResource ButtonDefault}"
+                                <WrapPanel Margin="0,2,0,8">
+                                    <Button Style="{StaticResource ButtonDefault}"
                                             Command="{Binding OpenOfficialUrlCommand}"
-                                            Margin="0,0,10,6" Padding="14,6"/>
+                                            Margin="0,0,10,4" Padding="14,0" Height="30">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Path Data="{StaticResource IconLinkGeometry}" Fill="{DynamicResource PrimaryBrush}"
+                                                  Width="12" Height="12" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{l:Loc Settings_Guide_OfficialDownload}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
 
-                                    <Button Content="🔗 EnterpriseDB (EDB) 下載專區"
-                                            Style="{StaticResource ButtonDefault}"
+                                    <Button Style="{StaticResource ButtonDefault}"
                                             Command="{Binding OpenEdbUrlCommand}"
-                                            Margin="0,0,0,6" Padding="14,6"/>
+                                            Margin="0,0,0,4" Padding="14,0" Height="30">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Path Data="{StaticResource IconLinkGeometry}" Fill="{DynamicResource PrimaryBrush}"
+                                                  Width="12" Height="12" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{l:Loc Settings_Guide_EdbDownload}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
                                 </WrapPanel>
 
                                 <TextBlock Text="{l:Loc Settings_Guide_PostInstallNotice}"
@@ -200,21 +203,22 @@
             </hc:Card>
 
             <!-- ── 卡片 2: 資料庫連線設定檔管理 ── -->
-            <hc:Card Margin="0,0,0,16" Padding="0" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+            <hc:Card Margin="0,0,0,12" Padding="0" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
                 <StackPanel>
                     <!-- 卡片標頭 -->
-                    <Border Background="{DynamicResource PrimaryBrush}" CornerRadius="4,4,0,0" Padding="18,12">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="🌐 " FontSize="14"/>
+                    <Border Background="{DynamicResource PrimaryBrush}" CornerRadius="4,4,0,0" Padding="14,8">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Path Data="{StaticResource IconDatabaseGeometry}" Fill="White"
+                                  Width="14" Height="14" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
                             <TextBlock Text="{l:Loc Settings_Connection_Title}"
-                                       FontSize="14" FontWeight="SemiBold" Foreground="White"/>
+                                       FontSize="14" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
-                    <StackPanel Margin="20,18,20,20">
+                    <StackPanel Margin="16,10,16,12">
 
                         <!-- 設定檔選取與切換工具列 -->
-                        <Grid Margin="0,0,0,16">
+                        <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="10"/>
@@ -223,81 +227,93 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
 
-                            <hc:ComboBox Grid.Column="0"
-                                         ItemsSource="{Binding Profiles}"
-                                         SelectedItem="{Binding SelectedProfile}"
-                                         DisplayMemberPath="DisplayName"
-                                         hc:InfoElement.Title="{l:Loc Settings_Profile}"
-                                         Height="32"/>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="{l:Loc Settings_Profile}" FontSize="12"
+                                           Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding Profiles}"
+                                          SelectedItem="{Binding SelectedProfile}"
+                                          DisplayMemberPath="DisplayName"
+                                          Height="32" VerticalContentAlignment="Center"/>
+                            </StackPanel>
 
                             <Button Grid.Column="2"
                                     Content="{l:Loc Settings_Profile_New}"
                                     Style="{StaticResource ButtonDefault}"
                                     Command="{Binding NewProfileCommand}"
-                                    Height="32" Padding="12,0"/>
+                                    VerticalAlignment="Bottom"
+                                    Height="32" Padding="14,0"/>
 
                             <Button Grid.Column="4"
                                     Content="{l:Loc Settings_Profile_Delete}"
                                     Style="{StaticResource ButtonDanger}"
                                     Command="{Binding DeleteProfileCommand}"
                                     IsEnabled="{Binding SelectedProfile, Converter={StaticResource InvertBoolConverter}, ConverterParameter=invertNull}"
-                                    Height="32" Padding="12,0"/>
+                                    VerticalAlignment="Bottom"
+                                    Height="32" Padding="14,0"/>
                         </Grid>
 
                         <!-- 連線表單 -->
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="16"/>
-                                <ColumnDefinition Width="160"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="12"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="12"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="12"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="16"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="12"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
+                        <StackPanel>
                             <!-- Profile Name -->
-                            <hc:TextBox Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
-                                        Text="{Binding ProfileName, UpdateSourceTrigger=PropertyChanged}"
-                                        hc:InfoElement.Title="{l:Loc Settings_Profile_Name}"
-                                        hc:InfoElement.Placeholder="例如：開發本機 PostgreSQL"/>
+                            <StackPanel Margin="0,0,0,6">
+                                <TextBlock Text="{l:Loc Settings_Profile_Name}" FontSize="12"
+                                           Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,4"/>
+                                <TextBox Text="{Binding ProfileName, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="32" VerticalContentAlignment="Center"
+                                         hc:InfoElement.Placeholder="{l:Loc Settings_Profile_Name_Placeholder}"/>
+                            </StackPanel>
 
                             <!-- Host + Port -->
-                            <hc:TextBox Grid.Row="2" Grid.Column="0"
-                                        Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
-                                        hc:InfoElement.Title="{l:Loc Settings_Host}"
-                                        hc:InfoElement.Placeholder="localhost"/>
-                            <hc:TextBox Grid.Row="2" Grid.Column="2"
-                                        Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
-                                        hc:InfoElement.Title="{l:Loc Settings_Port}"
-                                        hc:InfoElement.Placeholder="5432"/>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="140"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="{l:Loc Settings_Host}" FontSize="12"
+                                               Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}"
+                                             Height="32" VerticalContentAlignment="Center"
+                                             hc:InfoElement.Placeholder="localhost"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="{l:Loc Settings_Port}" FontSize="12"
+                                               Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}"
+                                             Height="32" VerticalContentAlignment="Center"
+                                             hc:InfoElement.Placeholder="5432"/>
+                                </StackPanel>
+                            </Grid>
 
-                            <!-- Database -->
-                            <hc:TextBox Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3"
-                                        Text="{Binding Database, UpdateSourceTrigger=PropertyChanged}"
-                                        hc:InfoElement.Title="{l:Loc Settings_Database}"
-                                        hc:InfoElement.Placeholder="postgres"/>
-
-                            <!-- Username -->
-                            <hc:TextBox Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="3"
-                                        Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
-                                        hc:InfoElement.Title="{l:Loc Settings_Username}"
-                                        hc:InfoElement.Placeholder="postgres"/>
+                            <!-- Database + Username (併排節省垂直空間，避免遮蔽) -->
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="{l:Loc Settings_Database}" FontSize="12"
+                                               Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding Database, UpdateSourceTrigger=PropertyChanged}"
+                                             Height="32" VerticalContentAlignment="Center"
+                                             hc:InfoElement.Placeholder="postgres"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="{l:Loc Settings_Username}" FontSize="12"
+                                               Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,4"/>
+                                    <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
+                                             Height="32" VerticalContentAlignment="Center"
+                                             hc:InfoElement.Placeholder="postgres"/>
+                                </StackPanel>
+                            </Grid>
 
                             <!-- 分隔線 -->
-                            <Separator Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,4"/>
+                            <Separator Margin="0,2,0,6"/>
 
                             <!-- 密碼 + 測試連線 + 儲存設定檔 -->
-                            <Grid Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="3">
+                            <Grid Margin="0,0,0,6">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="12"/>
@@ -306,12 +322,11 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0">
-                                    <TextBlock Text="{l:Loc Settings_Password}"
-                                               FontSize="12"
-                                               Foreground="{DynamicResource PrimaryTextBrush}"
-                                               Margin="0,0,0,6"/>
+                                    <TextBlock Text="{l:Loc Settings_Password}" FontSize="12"
+                                               Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,4"/>
                                     <PasswordBox x:Name="PwdBox"
-                                                 PasswordChanged="PasswordBox_PasswordChanged"/>
+                                                 PasswordChanged="PasswordBox_PasswordChanged"
+                                                 Height="32" VerticalContentAlignment="Center"/>
                                 </StackPanel>
 
                                 <Button Grid.Column="2"
@@ -331,16 +346,16 @@
                             </Grid>
 
                             <!-- 連線狀態輸出 -->
-                            <StackPanel Grid.Row="10" Grid.Column="0" Grid.ColumnSpan="3">
+                            <StackPanel Margin="0,2,0,0">
                                 <TextBlock Text="{Binding ServerVersionDisplay}"
                                            FontSize="12" FontWeight="SemiBold"
                                            Foreground="{DynamicResource PrimaryBrush}"
-                                           Margin="0,0,0,4"/>
+                                           Margin="0,0,0,2"/>
                                 <TextBlock Text="{Binding ConnectionStatusMessage}"
                                            FontSize="12" TextWrapping="Wrap"
                                            Foreground="{DynamicResource PrimaryTextBrush}"/>
                             </StackPanel>
-                        </Grid>
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
             </hc:Card>

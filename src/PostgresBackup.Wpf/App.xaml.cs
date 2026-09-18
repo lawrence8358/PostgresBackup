@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using PostgresBackup.Core.Interfaces;
@@ -45,5 +46,12 @@ public partial class App : Application
 
         var mainWindow = Services.GetRequiredService<MainWindow>();
         mainWindow.Show();
+
+
+        // 支援自動化截圖旗標 --capture <outputDir> [--custom-tools <toolsDir>]
+        if (UiCaptureService.IsCaptureMode(e.Args))
+        {
+            _ = UiCaptureService.RunCaptureAsync(mainWindow, Services, e.Args);
+        }
     }
 }

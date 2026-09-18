@@ -287,7 +287,7 @@
     <value>在執行資料庫還原前，系統將先對目標資料庫執行一次完整備份，作為防禦性還原點。</value>
   </data>
   <data name="Restore_Warning_Title" xml:space="preserve">
-    <value>⚠️ 高危險操作確認</value>
+    <value>高危險操作確認</value>
   </data>
   <data name="Restore_Warning_Desc" xml:space="preserve">
     <value>您即將對目標資料庫執行還原作業，既有資料可能被清除或覆蓋！請務必核對目標資料庫名稱。</value>
@@ -363,5 +363,38 @@
   </data>
   <data name="Log_Title" xml:space="preserve">
     <value>全域系統日誌</value>
+  </data>
+  <data name="Settings_PsqlPath" xml:space="preserve">
+    <value>psql 路徑</value>
+  </data>
+  <data name="Settings_Profile_Name_Placeholder" xml:space="preserve">
+    <value>例如：開發本機 PostgreSQL</value>
+  </data>
+  <data name="Backup_RefreshProfiles" xml:space="preserve">
+    <value>重新整理</value>
+  </data>
+  <data name="Backup_Schemas_Title" xml:space="preserve">
+    <value>指定綱要名稱（逗號分隔）</value>
+  </data>
+  <data name="Backup_Schemas_Placeholder" xml:space="preserve">
+    <value>例如：public, audit, telemetry</value>
+  </data>
+  <data name="Backup_Tables_Title" xml:space="preserve">
+    <value>指定資料表名稱（逗號分隔）</value>
+  </data>
+  <data name="Backup_Tables_Placeholder" xml:space="preserve">
+    <value>例如：users, orders, payments</value>
+  </data>
+  <data name="Log_StreamTitle" xml:space="preserve">
+    <value>全域即時執行串流</value>
+  </data>
+  <data name="Settings_Guide_LicenseNotice" xml:space="preserve">
+    <value>官方 PostgreSQL 客戶端工具 (pg_dump / pg_restore / psql) 遵循開源 PostgreSQL License (BSD 相容)，100% 允許免費商業使用及分發，無額外商用授權費。</value>
+  </data>
+  <data name="Settings_Guide_OfficialDownload" xml:space="preserve">
+    <value>PostgreSQL 官方 Windows 下載</value>
+  </data>
+  <data name="Settings_Guide_EdbDownload" xml:space="preserve">
+    <value>EnterpriseDB (EDB) 下載專區</value>
   </data>
 </root>

@@ -6,7 +6,7 @@
              xmlns:hc="https://handyorg.github.io/handycontrol"
              xmlns:l="clr-namespace:PostgresBackup.Wpf.Extensions"
              mc:Ignorable="d">
-    <Grid Margin="28,24,28,28">
+    <Grid Margin="24,20,24,24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -30,8 +30,9 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="📋 " FontSize="14"/>
-                            <TextBlock Text="全域即時執行串流" FontSize="14" FontWeight="SemiBold" Foreground="White"/>
+                            <Path Data="{StaticResource IconLogGeometry}" Fill="White"
+                                  Width="14" Height="14" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="{l:Loc Log_StreamTitle}" FontSize="14" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Orientation="Horizontal">
                             <Button Content="{l:Loc Backup_ClearLog}"
@@ -48,15 +49,10 @@
 
                 <!-- 終端文字區塊 -->
                 <Border Background="#181818" CornerRadius="0,0,4,4" Padding="14">
-                    <TextBox Text="{Binding LogContent, Mode=OneWay}"
-                             Background="Transparent"
-                             Foreground="#E0E0E0"
-                             BorderThickness="0"
-                             IsReadOnly="True"
-                             TextWrapping="Wrap"
-                             FontFamily="Consolas, Courier New, monospace"
-                             FontSize="12"
-                             VerticalScrollBarVisibility="Auto"/>
+                    <TextBox x:Name="LogTextBox"
+                             Style="{StaticResource TerminalTextBoxStyle}"
+                             Text="{Binding LogContent, Mode=OneWay}"
+                             TextChanged="LogTextBox_TextChanged"/>
                 </Border>
             </DockPanel>
         </hc:Card>

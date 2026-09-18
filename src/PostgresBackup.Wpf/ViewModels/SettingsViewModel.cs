@@ -21,6 +21,11 @@ public partial class SettingsViewModel : ObservableObject
     {
         _toolDetector = toolDetector;
         _profileRepo = profileRepo;
+
+        LocalizationService.Instance.PropertyChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(CopyButtonText));
+        };
     }
 
     // ── 客戶端工具偵測狀態 ──
@@ -35,7 +40,12 @@ public partial class SettingsViewModel : ObservableObject
     private bool _isDetecting;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CopyButtonText))]
     private bool _isCopied;
+
+    public string CopyButtonText => IsCopied
+        ? $"✓ {LocalizationService.Instance["Settings_Guide_Copied"]}"
+        : $"📋 {LocalizationService.Instance["Settings_Guide_CopyCommand"]}";
 
     [ObservableProperty]
     private string _statusMessage = string.Empty;

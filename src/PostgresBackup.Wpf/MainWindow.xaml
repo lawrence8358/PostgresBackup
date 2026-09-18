@@ -9,9 +9,14 @@
            xmlns:l="clr-namespace:PostgresBackup.Wpf.Extensions"
            mc:Ignorable="d"
            Title="{Binding WindowTitle}"
-           Height="680" Width="1000"
-           MinHeight="500" MinWidth="750"
+           Height="600" Width="960"
+           MinHeight="480" MinWidth="720"
+           WindowStartupLocation="CenterScreen"
            NonClientAreaBackground="{DynamicResource PrimaryBrush}"
+           NonClientAreaForeground="White"
+           CloseButtonForeground="White"
+           OtherButtonForeground="White"
+           Icon="pack://application:,,,/Resources/app.ico"
            ShowInTaskbar="True">
 
     <Grid>
@@ -31,10 +36,11 @@
                         Background="{DynamicResource PrimaryBrush}"
                         Padding="20,18">
                     <StackPanel>
-                        <TextBlock Text="🛡️"
-                                   FontSize="28"
-                                   HorizontalAlignment="Center"
-                                   Margin="0,0,0,6"/>
+                        <Image Source="pack://application:,,,/Resources/icon_white.png"
+                               Width="36" Height="36"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,8"
+                               RenderOptions.BitmapScalingMode="HighQuality"/>
                         <TextBlock Text="PostgresBackup"
                                    FontSize="15" FontWeight="SemiBold"
                                    Foreground="White"
@@ -71,33 +77,65 @@
                 </ComboBox>
 
                 <!-- 導覽選單 -->
-                <StackPanel Margin="12,16,12,0">
-                    <RadioButton x:Name="NavSettings"
-                                 Content="{l:Loc Nav_Settings}"
-                                 IsChecked="True"
-                                 Style="{StaticResource NavMenuRadioButtonStyle}"
-                                 Checked="Nav_Checked" Tag="Settings"/>
-                    <RadioButton x:Name="NavBackup"
-                                 Content="{l:Loc Nav_Backup}"
-                                 Style="{StaticResource NavMenuRadioButtonStyle}"
-                                 Checked="Nav_Checked" Tag="Backup"
-                                 Margin="0,4,0,0"/>
-                    <RadioButton x:Name="NavRestore"
-                                 Content="{l:Loc Nav_Restore}"
-                                 Style="{StaticResource NavMenuRadioButtonStyle}"
-                                 Checked="Nav_Checked" Tag="Restore"
-                                 Margin="0,4,0,0"/>
-                    <RadioButton x:Name="NavHistory"
-                                 Content="{l:Loc Nav_History}"
-                                 Style="{StaticResource NavMenuRadioButtonStyle}"
-                                 Checked="Nav_Checked" Tag="History"
-                                 Margin="0,4,0,0"/>
-                    <RadioButton x:Name="NavLog"
-                                 Content="{l:Loc Nav_Log}"
-                                 Style="{StaticResource NavMenuRadioButtonStyle}"
-                                 Checked="Nav_Checked" Tag="Log"
-                                 Margin="0,4,0,0"/>
-                </StackPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="12,16,12,0">
+                        <RadioButton x:Name="NavSettings"
+                                     IsChecked="True"
+                                     Style="{StaticResource NavMenuRadioButtonStyle}"
+                                     Checked="Nav_Checked" Tag="Settings">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Path Data="{StaticResource IconToolsGeometry}"
+                                      Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                      Width="14" Height="14" Stretch="Uniform" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{l:Loc Nav_Settings}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton x:Name="NavBackup"
+                                     Style="{StaticResource NavMenuRadioButtonStyle}"
+                                     Checked="Nav_Checked" Tag="Backup"
+                                     Margin="0,4,0,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Path Data="{StaticResource IconBoxGeometry}"
+                                      Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                      Width="14" Height="14" Stretch="Uniform" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{l:Loc Nav_Backup}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton x:Name="NavRestore"
+                                     Style="{StaticResource NavMenuRadioButtonStyle}"
+                                     Checked="Nav_Checked" Tag="Restore"
+                                     Margin="0,4,0,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Path Data="{StaticResource IconRestoreGeometry}"
+                                      Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                      Width="14" Height="14" Stretch="Uniform" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{l:Loc Nav_Restore}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton x:Name="NavHistory"
+                                     Style="{StaticResource NavMenuRadioButtonStyle}"
+                                     Checked="Nav_Checked" Tag="History"
+                                     Margin="0,4,0,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Path Data="{StaticResource IconHistoryGeometry}"
+                                      Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                      Width="14" Height="14" Stretch="Uniform" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{l:Loc Nav_History}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
+                        <RadioButton x:Name="NavLog"
+                                     Style="{StaticResource NavMenuRadioButtonStyle}"
+                                     Checked="Nav_Checked" Tag="Log"
+                                     Margin="0,4,0,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Path Data="{StaticResource IconLogGeometry}"
+                                      Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                      Width="14" Height="14" Stretch="Uniform" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="{l:Loc Nav_Log}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
+                    </StackPanel>
+                </ScrollViewer>
             </DockPanel>
         </Border>
 

@@ -32,8 +32,15 @@ public partial class MainWindow
             }
         }
 
-        // 預設切換至 Settings 頁面
-        SwitchToPage("Settings");
+        // 確保視窗高度與寬度不超出可用工作區 (工作列上方)
+        if (Height > SystemParameters.WorkArea.Height)
+        {
+            Height = Math.Max(480, SystemParameters.WorkArea.Height - 30);
+        }
+        if (Width > SystemParameters.WorkArea.Width)
+        {
+            Width = Math.Max(720, SystemParameters.WorkArea.Width - 30);
+        }
 
         // 系統啟動時初始化連線設定檔並掃描客戶端工具
         _ = _vm.Settings.InitializeAsync();
@@ -73,28 +80,33 @@ public partial class MainWindow
         }
     }
 
-    private void SwitchToPage(string pageName)
+    public void SwitchToPage(string pageName)
     {
         if (MainContent == null) return;
 
         switch (pageName)
         {
             case "Settings":
+                if (NavSettings != null && NavSettings.IsChecked != true) NavSettings.IsChecked = true;
                 MainContent.Content = MainContent.Resources["SettingsPage"];
                 break;
             case "Backup":
+                if (NavBackup != null && NavBackup.IsChecked != true) NavBackup.IsChecked = true;
                 _ = _vm.Backup.InitializeAsync();
                 MainContent.Content = MainContent.Resources["BackupPage"];
                 break;
             case "Restore":
+                if (NavRestore != null && NavRestore.IsChecked != true) NavRestore.IsChecked = true;
                 _ = _vm.Restore.InitializeAsync();
                 MainContent.Content = MainContent.Resources["RestorePage"];
                 break;
             case "History":
+                if (NavHistory != null && NavHistory.IsChecked != true) NavHistory.IsChecked = true;
                 _ = _vm.History.LoadRecordsAsync();
                 MainContent.Content = MainContent.Resources["HistoryPage"];
                 break;
             case "Log":
+                if (NavLog != null && NavLog.IsChecked != true) NavLog.IsChecked = true;
                 MainContent.Content = MainContent.Resources["LogPage"];
                 break;
             default:

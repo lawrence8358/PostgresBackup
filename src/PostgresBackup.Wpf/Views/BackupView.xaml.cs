@@ -8,4 +8,9 @@ public partial class BackupView : UserControl
     {
         InitializeComponent();
     }
+
+    private void TerminalBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        TerminalBox.ScrollToEnd();
+    }
 }

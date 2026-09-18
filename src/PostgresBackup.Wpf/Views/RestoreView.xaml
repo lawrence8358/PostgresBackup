@@ -12,73 +12,80 @@
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
     </UserControl.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="28,24,28,28" MaxWidth="920">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="24,14,24,16" MaxWidth="920">
 
             <!-- 頁面標題 -->
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,24">
-                <Border Width="4" Height="24" Background="{DynamicResource PrimaryBrush}" CornerRadius="2" Margin="0,0,12,0"/>
-                <TextBlock Text="{l:Loc Restore_Title}" FontSize="22" FontWeight="SemiBold"
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                <Border Width="4" Height="22" Background="{DynamicResource PrimaryBrush}" CornerRadius="2" Margin="0,0,10,0"/>
+                <TextBlock Text="{l:Loc Restore_Title}" FontSize="20" FontWeight="SemiBold"
                            Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
             </StackPanel>
 
             <!-- ── 卡片 1: 還原設定與參數 ── -->
-            <hc:Card Margin="0,0,0,24" Padding="0" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+            <hc:Card Margin="0,0,0,14" Padding="0" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
                 <StackPanel>
-                    <Border Background="{DynamicResource PrimaryBrush}" CornerRadius="4,4,0,0" Padding="18,12">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="🔄 " FontSize="14"/>
+                    <Border Background="{DynamicResource PrimaryBrush}" CornerRadius="4,4,0,0" Padding="16,10">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <Path Data="{StaticResource IconRestoreGeometry}" Fill="White"
+                                  Width="14" Height="14" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
                             <TextBlock Text="{l:Loc Restore_Card_Config}"
-                                       FontSize="14" FontWeight="SemiBold" Foreground="White"/>
+                                       FontSize="14" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
-                    <StackPanel Margin="20,18,20,20">
+                    <StackPanel Margin="18,12,18,14">
 
                         <!-- 來源檔案選取 -->
-                        <Grid Margin="0,0,0,16">
+                        <Grid Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="10"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <hc:TextBox Grid.Column="0"
-                                        Text="{Binding SourceFilePath, UpdateSourceTrigger=PropertyChanged}"
-                                        hc:InfoElement.Title="{l:Loc Restore_SourceFile}"
-                                        hc:InfoElement.Placeholder="請選取 .dump 或 .sql 備份檔案"
-                                        Height="32"/>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="{l:Loc Restore_SourceFile}" FontSize="12"
+                                           Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,6"/>
+                                <TextBox Text="{Binding SourceFilePath, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="32" VerticalContentAlignment="Center"
+                                         hc:InfoElement.Placeholder="請選取 .dump 或 .sql 備份檔案"/>
+                            </StackPanel>
                             <Button Grid.Column="2"
                                     Content="{l:Loc Settings_Browse}"
                                     Style="{StaticResource ButtonDefault}"
                                     Command="{Binding BrowseSourceFileCommand}"
                                     VerticalAlignment="Bottom"
-                                    Height="32" Padding="14,0"/>
+                                    Height="32" Padding="16,0"/>
                         </Grid>
 
                         <!-- 目標連線與目標資料庫 -->
-                        <Grid Margin="0,0,0,16">
+                        <Grid Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="16"/>
-                                <ColumnDefinition Width="250"/>
+                                <ColumnDefinition Width="14"/>
+                                <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <hc:ComboBox Grid.Column="0"
-                                         ItemsSource="{Binding Profiles}"
-                                         SelectedItem="{Binding SelectedProfile}"
-                                         DisplayMemberPath="DisplayName"
-                                         hc:InfoElement.Title="{l:Loc Restore_TargetProfile}"
-                                         Height="32"/>
-                            <hc:TextBox Grid.Column="2"
-                                        Text="{Binding TargetDatabase, UpdateSourceTrigger=PropertyChanged}"
-                                        hc:InfoElement.Title="{l:Loc Restore_TargetDb}"
-                                        Height="32"/>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="{l:Loc Restore_TargetProfile}" FontSize="12"
+                                           Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,6"/>
+                                <ComboBox ItemsSource="{Binding Profiles}"
+                                          SelectedItem="{Binding SelectedProfile}"
+                                          DisplayMemberPath="DisplayName"
+                                          Height="32" VerticalContentAlignment="Center"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="{l:Loc Restore_TargetDb}" FontSize="12"
+                                           Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,6"/>
+                                <TextBox Text="{Binding TargetDatabase, UpdateSourceTrigger=PropertyChanged}"
+                                         Height="32" VerticalContentAlignment="Center"/>
+                            </StackPanel>
                         </Grid>
 
                         <!-- 還原模式選取 -->
-                        <StackPanel Margin="0,0,0,16">
+                        <StackPanel Margin="0,0,0,10">
                             <TextBlock Text="{l:Loc Restore_Mode}" FontSize="12"
-                                       Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,8"/>
-                            <ComboBox SelectedIndex="0" Height="32"
+                                       Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,6"/>
+                            <ComboBox SelectedIndex="0" Height="32" VerticalContentAlignment="Center"
                                       SelectedValuePath="Tag"
                                       SelectedValue="{Binding Mode, Mode=TwoWay}">
                                 <ComboBoxItem Content="{l:Loc Restore_Mode_Normal}" Tag="{x:Static l:RestoreModeHelper.Normal}"/>
@@ -89,17 +96,18 @@
 
                         <!-- 前置安全快照防護設定 -->
                         <Border Background="#082E7D32" BorderBrush="{DynamicResource PrimaryBrush}"
-                                BorderThickness="1" CornerRadius="6" Padding="16,12" Margin="0,0,0,20">
+                                BorderThickness="1" CornerRadius="6" Padding="14,10" Margin="0,0,0,14">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="🛡️ " FontSize="13"/>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Path Data="{StaticResource IconShieldCheckGeometry}" Fill="{DynamicResource PrimaryBrush}"
+                                              Width="14" Height="14" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center"/>
                                         <TextBlock Text="{l:Loc Restore_Snapshot_Label}"
-                                                   FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource PrimaryBrush}"/>
+                                                   FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource PrimaryBrush}" VerticalAlignment="Center"/>
                                     </StackPanel>
                                     <TextBlock Text="{l:Loc Restore_Snapshot_Desc}"
                                                FontSize="11" Margin="22,4,0,0" Foreground="{DynamicResource SecondaryTextBrush}"
@@ -113,15 +121,17 @@
 
                         <!-- ⚠️ 高危險操作二次確認警示框 -->
                         <Border Background="#FFF8E1" BorderBrush="#FFA000" BorderThickness="1"
-                                CornerRadius="6" Padding="16,14" Margin="0,0,0,20">
+                                CornerRadius="6" Padding="14,10" Margin="0,0,0,14">
                             <StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4" VerticalAlignment="Center">
+                                    <Path Data="{StaticResource IconAlertWarningGeometry}" Fill="#C62828"
+                                          Width="14" Height="14" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center"/>
                                     <TextBlock Text="{l:Loc Restore_Warning_Title}"
-                                               FontWeight="Bold" FontSize="13" Foreground="#C62828"/>
+                                               FontWeight="Bold" FontSize="13" Foreground="#C62828" VerticalAlignment="Center"/>
                                 </StackPanel>
                                 <TextBlock Text="{l:Loc Restore_Warning_Desc}"
-                                           FontSize="12" Foreground="#D32F2F" TextWrapping="Wrap" Margin="0,0,0,10"/>
-                                <TextBlock Margin="0,0,0,10">
+                                           FontSize="11" Foreground="#D32F2F" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                                <TextBlock Margin="0,0,0,8" FontSize="11">
                                     <Run Text="{l:Loc Restore_Confirm_Prompt}"/>
                                     <Run Text=" "/>
                                     <Run Text="{Binding TargetDatabase}" FontWeight="Bold" Foreground="#C62828"/>
@@ -129,6 +139,7 @@
                                 <CheckBox IsChecked="{Binding IsConfirmed}"
                                           Content="{l:Loc Restore_Confirm_Checkbox}"
                                           FontWeight="SemiBold"
+                                          FontSize="12"
                                           Foreground="#B71C1C"/>
                             </StackPanel>
                         </Border>
@@ -152,10 +163,12 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="💻 " FontSize="14"/>
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
+                                <Path Data="{StaticResource IconTerminalGeometry}" Fill="White"
+                                      Width="14" Height="14" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="{l:Loc Backup_Terminal}"
-                                           FontSize="14" FontWeight="SemiBold" Foreground="White"/>
+                                           FontSize="14" FontWeight="SemiBold" Foreground="White"
+                                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal">
                                 <Button Content="{l:Loc Backup_ClearLog}"
@@ -171,16 +184,11 @@
                     </Border>
 
                     <Border Background="#181818" CornerRadius="0,0,4,4" Padding="12" MinHeight="180">
-                        <TextBox Text="{Binding TerminalOutput, Mode=OneWay}"
-                                 Background="Transparent"
-                                 Foreground="#E0E0E0"
-                                 BorderThickness="0"
-                                 IsReadOnly="True"
-                                 TextWrapping="Wrap"
-                                 FontFamily="Consolas, Courier New, monospace"
-                                 FontSize="12"
-                                 VerticalScrollBarVisibility="Auto"
-                                 Height="220"/>
+                        <TextBox x:Name="TerminalBox"
+                                 Style="{StaticResource TerminalTextBoxStyle}"
+                                 Height="220"
+                                 Text="{Binding TerminalOutput, Mode=OneWay}"
+                                 TextChanged="TerminalBox_TextChanged"/>
                     </Border>
                 </StackPanel>
             </hc:Card>

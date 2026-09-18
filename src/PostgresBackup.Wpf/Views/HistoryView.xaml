@@ -13,162 +13,179 @@
         <converters:BackupStatusToBrushConverter x:Key="BackupStatusToBrushConverter"/>
     </UserControl.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="28,24,28,28" MaxWidth="1050">
+    <Grid Margin="24,20,24,24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-            <!-- 頁面標題 -->
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,24">
-                <Border Width="4" Height="24" Background="{DynamicResource PrimaryBrush}" CornerRadius="2" Margin="0,0,12,0"/>
-                <TextBlock Text="{l:Loc History_Title}" FontSize="22" FontWeight="SemiBold"
-                           Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
-            </StackPanel>
-
-            <!-- ── 卡片: 不可變稽核清單 ── -->
-            <hc:Card Padding="0" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
-                <StackPanel>
-                    <Border Background="{DynamicResource PrimaryBrush}" CornerRadius="4,4,0,0" Padding="18,12">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="📜 " FontSize="14"/>
-                            <TextBlock Text="{l:Loc History_Card_Records}"
-                                       FontSize="14" FontWeight="SemiBold" Foreground="White"/>
-                        </StackPanel>
-                    </Border>
-
-                    <StackPanel Margin="20,18,20,20">
-
-                        <!-- 篩選與搜尋列 -->
-                        <Grid Margin="0,0,0,16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="200"/>
-                                <ColumnDefinition Width="12"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="12"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-
-                            <!-- 操作類型過濾 -->
-                            <ComboBox Grid.Column="0"
-                                      SelectedIndex="{Binding SelectedFilterIndex, Mode=TwoWay}"
-                                      Height="32">
-                                <ComboBoxItem Content="{l:Loc History_Filter_All}"/>
-                                <ComboBoxItem Content="{l:Loc History_Filter_Backup}"/>
-                                <ComboBoxItem Content="{l:Loc History_Filter_Restore}"/>
-                                <ComboBoxItem Content="{l:Loc History_Filter_Snapshot}"/>
-                            </ComboBox>
-
-                            <!-- 搜尋欄 -->
-                            <hc:TextBox Grid.Column="2"
-                                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                        hc:InfoElement.Placeholder="{l:Loc History_Search}"
-                                        Height="32"/>
-
-                            <!-- 重新整理按鈕 -->
-                            <Button Grid.Column="4"
-                                    Content="{l:Loc History_Refresh}"
-                                    Style="{StaticResource ButtonDefault}"
-                                    Command="{Binding LoadRecordsCommand}"
-                                    Height="32" Padding="14,0"/>
-                        </Grid>
-
-                        <!-- 歷史紀錄資料表格 -->
-                        <DataGrid ItemsSource="{Binding Records}"
-                                  SelectedItem="{Binding SelectedRecord}"
-                                  AutoGenerateColumns="False"
-                                  CanUserAddRows="False"
-                                  CanUserDeleteRows="False"
-                                  IsReadOnly="True"
-                                  GridLinesVisibility="Horizontal"
-                                  HeadersVisibility="Column"
-                                  Background="White"
-                                  RowHeight="40"
-                                  BorderBrush="{DynamicResource BorderBrush}"
-                                  BorderThickness="1"
-                                  MinHeight="350">
-                            <DataGrid.Columns>
-                                <!-- 時間 -->
-                                <DataGridTextColumn Header="{l:Loc History_Col_Time}"
-                                                    Binding="{Binding Timestamp, StringFormat='yyyy-MM-dd HH:mm:ss'}"
-                                                    Width="150"/>
-
-                                <!-- 作業類型 -->
-                                <DataGridTemplateColumn Header="{l:Loc History_Col_Type}" Width="130">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Border Background="#102E7D32" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding OperationTypeDisplay}"
-                                                           FontWeight="SemiBold" FontSize="11" Foreground="{DynamicResource PrimaryBrush}"/>
-                                            </Border>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-
-                                <!-- 資料庫 -->
-                                <DataGridTextColumn Header="{l:Loc History_Col_Db}"
-                                                    Binding="{Binding DatabaseName}"
-                                                    FontWeight="Medium"
-                                                    Width="110"/>
-
-                                <!-- 格式 -->
-                                <DataGridTextColumn Header="{l:Loc History_Col_Format}"
-                                                    Binding="{Binding Format}"
-                                                    Width="70"/>
-
-                                <!-- 檔案大小 -->
-                                <DataGridTextColumn Header="{l:Loc History_Col_Size}"
-                                                    Binding="{Binding FormattedSize}"
-                                                    Width="90"/>
-
-                                <!-- 耗時 -->
-                                <DataGridTextColumn Header="{l:Loc History_Col_Duration}"
-                                                    Binding="{Binding FormattedDuration}"
-                                                    Width="80"/>
-
-                                <!-- 狀態 Badge -->
-                                <DataGridTemplateColumn Header="{l:Loc History_Col_Status}" Width="80">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <Border Background="{Binding Status, Converter={StaticResource BackupStatusToBrushConverter}}"
-                                                    CornerRadius="4" Padding="8,2" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Status}"
-                                                           Foreground="White" FontWeight="Bold" FontSize="11"/>
-                                            </Border>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-
-                                <!-- 動作按鈕 -->
-                                <DataGridTemplateColumn Header="{l:Loc History_Col_Actions}" Width="*">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Button Content="{l:Loc History_Action_OpenFile}"
-                                                        Style="{StaticResource ButtonDefault}"
-                                                        Padding="8,2" Margin="0,0,6,0" FontSize="11"
-                                                        Command="{Binding DataContext.OpenFileLocationCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                        CommandParameter="{Binding}"/>
-
-                                                <Button Content="{l:Loc History_Action_Restore}"
-                                                        Style="{StaticResource ButtonPrimary}"
-                                                        Padding="8,2" Margin="0,0,6,0" FontSize="11"
-                                                        Command="{Binding DataContext.InitiateRestoreCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                        CommandParameter="{Binding}"/>
-
-                                                <Button Content="{l:Loc History_Action_Delete}"
-                                                        Style="{StaticResource ButtonDanger}"
-                                                        Padding="8,2" FontSize="11"
-                                                        Command="{Binding DataContext.DeleteRecordCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                        CommandParameter="{Binding}"/>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                            </DataGrid.Columns>
-                        </DataGrid>
-
-                    </StackPanel>
-                </StackPanel>
-            </hc:Card>
-
+        <!-- 頁面標題 -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,16">
+            <Border Width="4" Height="24" Background="{DynamicResource PrimaryBrush}" CornerRadius="2" Margin="0,0,12,0"/>
+            <TextBlock Text="{l:Loc History_Title}" FontSize="22" FontWeight="SemiBold"
+                       Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
         </StackPanel>
-    </ScrollViewer>
+
+        <!-- ── 卡片: 不可變稽核清單 ── -->
+        <hc:Card Grid.Row="1" Padding="0" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                 VerticalContentAlignment="Stretch" HorizontalContentAlignment="Stretch">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- 卡片標頭 -->
+                <Border Grid.Row="0" Background="{DynamicResource PrimaryBrush}" CornerRadius="4,4,0,0" Padding="18,12">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Path Data="{StaticResource IconHistoryGeometry}" Fill="White"
+                              Width="14" Height="14" Stretch="Uniform" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{l:Loc History_Card_Records}"
+                                   FontSize="14" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- 卡片內容 -->
+                <Grid Grid.Row="1" Margin="16,14,16,16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- 篩選與搜尋列 -->
+                    <Grid Grid.Row="0" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="130"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- 操作類型過濾 -->
+                        <ComboBox Grid.Column="0"
+                                  SelectedIndex="{Binding SelectedFilterIndex, Mode=TwoWay}"
+                                  Height="32">
+                            <ComboBoxItem Content="{l:Loc History_Filter_All}"/>
+                            <ComboBoxItem Content="{l:Loc History_Filter_Backup}"/>
+                            <ComboBoxItem Content="{l:Loc History_Filter_Restore}"/>
+                            <ComboBoxItem Content="{l:Loc History_Filter_Snapshot}"/>
+                        </ComboBox>
+
+                        <!-- 搜尋欄 -->
+                        <hc:TextBox Grid.Column="2"
+                                    Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                    hc:InfoElement.Placeholder="{l:Loc History_Search}"
+                                    Height="32"/>
+
+                        <!-- 重新整理按鈕 -->
+                        <Button Grid.Column="4"
+                                Content="{l:Loc History_Refresh}"
+                                Style="{StaticResource ButtonDefault}"
+                                Command="{Binding LoadRecordsCommand}"
+                                Height="32" Padding="14,0"/>
+                    </Grid>
+
+                    <!-- 歷史紀錄資料表格 -->
+                    <DataGrid Grid.Row="1"
+                              ItemsSource="{Binding Records}"
+                              SelectedItem="{Binding SelectedRecord}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              IsReadOnly="True"
+                              GridLinesVisibility="Horizontal"
+                              HeadersVisibility="Column"
+                              Background="White"
+                              RowHeight="40"
+                              BorderBrush="{DynamicResource BorderBrush}"
+                              BorderThickness="1"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto">
+                        <DataGrid.Columns>
+                            <!-- 時間 -->
+                            <DataGridTextColumn Header="{l:Loc History_Col_Time}"
+                                                Binding="{Binding Timestamp, StringFormat='yyyy-MM-dd HH:mm:ss'}"
+                                                Width="140"/>
+
+                            <!-- 作業類型 -->
+                            <DataGridTemplateColumn Header="{l:Loc History_Col_Type}" Width="90">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#102E7D32" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding OperationTypeDisplay}"
+                                                       FontWeight="SemiBold" FontSize="11" Foreground="{DynamicResource PrimaryBrush}"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- 資料庫 -->
+                            <DataGridTextColumn Header="{l:Loc History_Col_Db}"
+                                                Binding="{Binding DatabaseName}"
+                                                FontWeight="Medium"
+                                                Width="105"/>
+
+                            <!-- 格式 -->
+                            <DataGridTextColumn Header="{l:Loc History_Col_Format}"
+                                                Binding="{Binding Format}"
+                                                Width="70"/>
+
+                            <!-- 檔案大小 -->
+                            <DataGridTextColumn Header="{l:Loc History_Col_Size}"
+                                                Binding="{Binding FormattedSize}"
+                                                Width="90"/>
+
+                            <!-- 耗時 -->
+                            <DataGridTextColumn Header="{l:Loc History_Col_Duration}"
+                                                Binding="{Binding FormattedDuration}"
+                                                Width="85"/>
+
+                            <!-- 狀態 Badge -->
+                            <DataGridTemplateColumn Header="{l:Loc History_Col_Status}" Width="80">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{Binding Status, Converter={StaticResource BackupStatusToBrushConverter}}"
+                                                CornerRadius="4" Padding="8,2" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Status}"
+                                                       Foreground="White" FontWeight="Bold" FontSize="11"/>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- 動作按鈕 -->
+                            <DataGridTemplateColumn Header="{l:Loc History_Col_Actions}" Width="220">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Button Content="{l:Loc History_Action_OpenFile}"
+                                                    Style="{StaticResource ButtonDefault}"
+                                                    Padding="6,2" Margin="0,0,4,0" FontSize="11"
+                                                    Command="{Binding DataContext.OpenFileLocationCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    CommandParameter="{Binding}"/>
+
+                                            <Button Content="{l:Loc History_Action_Restore}"
+                                                    Style="{StaticResource ButtonPrimary}"
+                                                    Padding="6,2" Margin="0,0,4,0" FontSize="11"
+                                                    Command="{Binding DataContext.InitiateRestoreCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    CommandParameter="{Binding}"/>
+
+                                            <Button Content="{l:Loc History_Action_Delete}"
+                                                    Style="{StaticResource ButtonDanger}"
+                                                    Padding="6,2" FontSize="11"
+                                                    Command="{Binding DataContext.DeleteRecordCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                    CommandParameter="{Binding}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                </Grid>
+            </Grid>
+        </hc:Card>
+
+    </Grid>
 </UserControl>

@@ -38,3 +38,11 @@ backup_history.db
 .gemini
 .impeccable
 .lcaipack
+
+## [Integration Test Reports & Tools]
+reports/
+test-reports/
+.scratch/test-reports/
+.scratch/tools/
+*.dump
+*.sql

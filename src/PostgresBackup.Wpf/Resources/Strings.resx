@@ -287,7 +287,7 @@
     <value>Automatically creates a backup snapshot of the target database before restoring.</value>
   </data>
   <data name="Restore_Warning_Title" xml:space="preserve">
-    <value>⚠️ High-Risk Action Confirmation</value>
+    <value>High-Risk Action Confirmation</value>
   </data>
   <data name="Restore_Warning_Desc" xml:space="preserve">
     <value>You are about to restore onto the target database. Existing data may be overwritten or modified!</value>
@@ -363,5 +363,38 @@
   </data>
   <data name="Log_Title" xml:space="preserve">
     <value>System Execution Logs</value>
+  </data>
+  <data name="Settings_PsqlPath" xml:space="preserve">
+    <value>psql Path</value>
+  </data>
+  <data name="Settings_Profile_Name_Placeholder" xml:space="preserve">
+    <value>e.g. Local PostgreSQL</value>
+  </data>
+  <data name="Backup_RefreshProfiles" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Backup_Schemas_Title" xml:space="preserve">
+    <value>Specific Schemas (comma-separated)</value>
+  </data>
+  <data name="Backup_Schemas_Placeholder" xml:space="preserve">
+    <value>e.g. public, audit, telemetry</value>
+  </data>
+  <data name="Backup_Tables_Title" xml:space="preserve">
+    <value>Specific Tables (comma-separated)</value>
+  </data>
+  <data name="Backup_Tables_Placeholder" xml:space="preserve">
+    <value>e.g. users, orders, payments</value>
+  </data>
+  <data name="Log_StreamTitle" xml:space="preserve">
+    <value>Global Real-time Execution Stream</value>
+  </data>
+  <data name="Settings_Guide_LicenseNotice" xml:space="preserve">
+    <value>Official PostgreSQL client tools (pg_dump / pg_restore / psql) are licensed under the open-source PostgreSQL License (BSD-compatible), allowing 100% free commercial use and distribution with zero royalties.</value>
+  </data>
+  <data name="Settings_Guide_OfficialDownload" xml:space="preserve">
+    <value>PostgreSQL Official Windows Download</value>
+  </data>
+  <data name="Settings_Guide_EdbDownload" xml:space="preserve">
+    <value>EnterpriseDB (EDB) Downloads</value>
   </data>
 </root>

@@ -8,4 +8,9 @@ public partial class LogView : UserControl
     {
         InitializeComponent();
     }
+
+    private void LogTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        LogTextBox.ScrollToEnd();
+    }
 }
