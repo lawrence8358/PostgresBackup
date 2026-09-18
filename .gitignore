@@ -46,3 +46,6 @@ test-reports/
 .scratch/tools/
 *.dump
 *.sql
+
+## [Build Output]
+dist/
