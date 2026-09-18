@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PostgresBackup.Core.Tests",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PostgresBackup.Cli.Tests", "test\PostgresBackup.Cli.Tests\PostgresBackup.Cli.Tests.csproj", "{41CAE232-F09A-4236-ACCB-0C8C5C58540D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PostgresBackup.Wpf.Tests", "test\PostgresBackup.Wpf.Tests\PostgresBackup.Wpf.Tests.csproj", "{71EA387C-3EDC-4AF7-9500-920BB727D136}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -87,6 +89,18 @@ Global
 		{41CAE232-F09A-4236-ACCB-0C8C5C58540D}.Release|x64.Build.0 = Release|Any CPU
 		{41CAE232-F09A-4236-ACCB-0C8C5C58540D}.Release|x86.ActiveCfg = Release|Any CPU
 		{41CAE232-F09A-4236-ACCB-0C8C5C58540D}.Release|x86.Build.0 = Release|Any CPU
+		{71EA387C-3EDC-4AF7-9500-920BB727D136}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{71EA387C-3EDC-4AF7-9500-920BB727D136}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{71EA387C-3EDC-4AF7-9500-920BB727D136}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{71EA387C-3EDC-4AF7-9500-920BB727D136}.Debug|x64.Build.0 = Debug|Any CPU
+		{71EA387C-3EDC-4AF7-9500-920BB727D136}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{71EA387C-3EDC-4AF7-9500-920BB727D136}.Debug|x86.Build.0 = Debug|Any CPU
+		{71EA387C-3EDC-4AF7-9500-920BB727D136}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{71EA387C-3EDC-4AF7-9500-920BB727D136}.Release|Any CPU.Build.0 = Release|Any CPU
+		{71EA387C-3EDC-4AF7-9500-920BB727D136}.Release|x64.ActiveCfg = Release|Any CPU
+		{71EA387C-3EDC-4AF7-9500-920BB727D136}.Release|x64.Build.0 = Release|Any CPU
+		{71EA387C-3EDC-4AF7-9500-920BB727D136}.Release|x86.ActiveCfg = Release|Any CPU
+		{71EA387C-3EDC-4AF7-9500-920BB727D136}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -97,5 +111,6 @@ Global
 		{AD0179C3-21F9-4CAD-B6ED-055E733462BD} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{F3F5CF2A-4A5E-464C-AEA8-944C9DEE7CC8} = {0C88DD14-F956-CE84-757C-A364CCF449FC}
 		{41CAE232-F09A-4236-ACCB-0C8C5C58540D} = {0C88DD14-F956-CE84-757C-A364CCF449FC}
+		{71EA387C-3EDC-4AF7-9500-920BB727D136} = {0C88DD14-F956-CE84-757C-A364CCF449FC}
 	EndGlobalSection
 EndGlobal

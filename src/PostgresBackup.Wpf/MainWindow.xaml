@@ -16,7 +16,7 @@
            NonClientAreaForeground="White"
            CloseButtonForeground="White"
            OtherButtonForeground="White"
-           Icon="pack://application:,,,/Resources/app.ico"
+           Icon="pack://application:,,,/PostgresBackup.Wpf;component/Resources/app.ico"
            ShowInTaskbar="True">
 
     <Grid>
@@ -36,7 +36,7 @@
                         Background="{DynamicResource PrimaryBrush}"
                         Padding="20,18">
                     <StackPanel>
-                        <Image Source="pack://application:,,,/Resources/icon_white.png"
+                        <Image Source="pack://application:,,,/PostgresBackup.Wpf;component/Resources/icon_white.png"
                                Width="36" Height="36"
                                HorizontalAlignment="Center"
                                Margin="0,0,0,8"

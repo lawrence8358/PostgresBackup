@@ -49,6 +49,11 @@ public static class UiCaptureService
 
             var pages = new[] { "Settings", "Backup", "Restore", "History", "Log" };
 
+            // 啟動當下的原始畫面：刻意不呼叫 SwitchToPage，使本管線涵蓋應用程式
+            // 自身的啟動導覽路徑（歷史迴歸：啟動後內容區域空白）。
+            mainWindow.UpdateLayout();
+            CaptureWindow(mainWindow, Path.Combine(outputDir, "startup_initial.png"));
+
             foreach (var (sizeName, w, h) in sizes)
             {
                 mainWindow.Width = w;
@@ -61,21 +66,7 @@ public static class UiCaptureService
                     await Task.Delay(400);
                     mainWindow.UpdateLayout();
 
-                    int renderW = Math.Max(1, (int)mainWindow.ActualWidth);
-                    int renderH = Math.Max(1, (int)mainWindow.ActualHeight);
-
-                    var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
-                        renderW, renderH, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
-                    rtb.Render(mainWindow);
-
-                    var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
-                    encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
-
-                    var filePath = Path.Combine(outputDir, $"{sizeName}_{page}.png");
-                    using (var stream = File.Create(filePath))
-                    {
-                        encoder.Save(stream);
-                    }
+                    CaptureWindow(mainWindow, Path.Combine(outputDir, $"{sizeName}_{page}.png"));
                 }
             }
         }
@@ -87,5 +78,22 @@ public static class UiCaptureService
         {
             Application.Current?.Shutdown(0);
         }
+    }
+
+    /// <summary>將指定視窗之目前版面渲染為 PNG 檔案。</summary>
+    private static void CaptureWindow(Window window, string filePath)
+    {
+        int renderW = Math.Max(1, (int)window.ActualWidth);
+        int renderH = Math.Max(1, (int)window.ActualHeight);
+
+        var rtb = new System.Windows.Media.Imaging.RenderTargetBitmap(
+            renderW, renderH, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+        rtb.Render(window);
+
+        var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+        encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(rtb));
+
+        using var stream = File.Create(filePath);
+        encoder.Save(stream);
     }
 }

@@ -15,6 +15,11 @@ public partial class MainWindow
         DataContext = vm;
         InitializeComponent();
 
+        // NavSettings 的 Checked 事件在 InitializeComponent 解析左側邊欄時即觸發，
+        // 此時右側 MainContent 尚未建立，SwitchToPage 會被 null 防護提早返回，
+        // 導致啟動後內容區域空白。故於樹狀結構建立完成後補呼叫一次初始導覽。
+        SwitchToPage("Settings");
+
         Loaded += MainWindow_Loaded;
         _vm.NavigationRequested += OnNavigationRequested;
     }
