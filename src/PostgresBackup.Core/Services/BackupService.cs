@@ -2,6 +2,8 @@ using System.Diagnostics;
 using PostgresBackup.Core.Interfaces;
 using PostgresBackup.Core.Models;
 
+using PostgresBackup.Core.Resources;
+
 namespace PostgresBackup.Core.Services;
 
 /// <summary>
@@ -36,7 +38,7 @@ public class BackupService : IBackupService
         var detection = await _toolDetector.DetectAsync(options.ClientToolDirectory, ct);
         if (!detection.IsReady || string.IsNullOrWhiteSpace(detection.PgDumpPath))
         {
-            var errMsg = "未偵測到 PostgreSQL 客戶端工具 (pg_dump)！請先於設定頁面確認安裝或指定工具目錄。";
+            var errMsg = CoreStrings.Get("Backup_Error_PgDumpNotFound");
             onLogLine?.Invoke($"[ERROR] {errMsg}");
             return BackupResult.Failure(errMsg, -1, TimeSpan.Zero, string.Empty);
         }
@@ -60,10 +62,10 @@ public class BackupService : IBackupService
         var targetFilePath = options.GetTargetFilePath();
         var arguments = BackupArgumentsBuilder.Build(options, targetFilePath);
 
-        onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] 啟動備份作業: 資料庫 '{options.Connection.Database}'");
-        onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] 格式: {options.Format}, 模式: {options.Mode}, 範圍: {options.Scope}");
-        onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] 輸出路徑: {targetFilePath}");
-        onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] 執行工具: {pgDumpPath}");
+        onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Backup_Log_Start", options.Connection.Database)}");
+        onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Backup_Log_Options", options.Format, options.Mode, options.Scope)}");
+        onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Backup_Log_OutputPath", targetFilePath)}");
+        onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Backup_Log_Tool", pgDumpPath)}");
 
         // 4. 執行 pg_dump 並串流捕獲標準輸出與錯誤輸出
         var envVars = new Dictionary<string, string?>();
@@ -88,8 +90,8 @@ public class BackupService : IBackupService
             var fileInfo = new FileInfo(targetFilePath);
             var size = fileInfo.Length;
 
-            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [SUCCESS] 備份作業順利完成！");
-            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] 產出檔案大小: {FormatBytes(size)}, 耗時: {stopwatch.Elapsed.TotalSeconds:F2} 秒");
+            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [SUCCESS] {CoreStrings.Get("Backup_Log_Success")}");
+            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Backup_Log_FileInfo", FormatBytes(size), CoreStrings.Format("Format_DurationSeconds", stopwatch.Elapsed.TotalSeconds.ToString("F2")))}");
 
             if (_historyRepo != null)
             {
@@ -110,7 +112,7 @@ public class BackupService : IBackupService
                 }
                 catch (Exception ex)
                 {
-                    onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [WARNING] 寫入歷史倉儲失敗: {ex.Message}");
+                    onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [WARNING] {CoreStrings.Format("Backup_Log_HistoryWriteFailed", ex.Message)}");
                 }
             }
 
@@ -125,12 +127,12 @@ public class BackupService : IBackupService
         {
             var err = !string.IsNullOrWhiteSpace(processResult.StandardError)
                 ? processResult.StandardError
-                : processResult.ErrorMessage ?? "備份作業失敗，pg_dump 回傳非零退出碼。";
+                : processResult.ErrorMessage ?? CoreStrings.Get("Backup_Error_NonZeroExit");
 
-            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [ERROR] 備份作業失敗 (ExitCode: {processResult.ExitCode})");
+            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [ERROR] {CoreStrings.Format("Backup_Log_Failed", processResult.ExitCode)}");
             if (!string.IsNullOrWhiteSpace(err))
             {
-                onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] 錯誤訊息: {err}");
+                onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Backup_Log_ErrorDetail", err)}");
             }
 
             if (_historyRepo != null)

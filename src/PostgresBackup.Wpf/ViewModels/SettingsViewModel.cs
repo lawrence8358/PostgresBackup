@@ -25,6 +25,9 @@ public partial class SettingsViewModel : ObservableObject
         LocalizationService.Instance.PropertyChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(CopyButtonText));
+            OnPropertyChanged(nameof(SourceDisplay));
+            OnPropertyChanged(nameof(ToolVersionDisplay));
+            RefreshToolStatusMessage();
         };
     }
 
@@ -54,14 +57,16 @@ public partial class SettingsViewModel : ObservableObject
     public bool IsReady => ToolResult.IsReady;
     public bool ShowGuide => ToolResult.Status != ToolStatus.Ready;
 
-    public string SourceDisplay => ToolResult.Source switch
+    public string SourceDisplay => LocalizationService.S("Settings_ToolSource_Format", ToolResult.Source switch
     {
-        DetectionSource.CustomPath => "使用者指定目錄 (Custom Path)",
-        DetectionSource.Path => "系統 PATH 環境變數 (System PATH)",
-        DetectionSource.CommonDirectory => "標準安裝目錄 (C:\\Program Files\\PostgreSQL)",
-        DetectionSource.Registry => "Windows Registry 登錄檔",
-        _ => "無 (None)"
-    };
+        DetectionSource.CustomPath => LocalizationService.S("Settings_Source_CustomPath"),
+        DetectionSource.Path => LocalizationService.S("Settings_Source_Path"),
+        DetectionSource.CommonDirectory => LocalizationService.S("Settings_Source_CommonDirectory"),
+        DetectionSource.Registry => LocalizationService.S("Settings_Source_Registry"),
+        _ => LocalizationService.S("Settings_Source_None")
+    });
+
+    public string ToolVersionDisplay => LocalizationService.S("Settings_ToolVersion_Format", ToolResult.Version);
 
     // ── 資料庫連線設定與設定檔管理 ──
 
@@ -71,7 +76,7 @@ public partial class SettingsViewModel : ObservableObject
     private ConnectionProfile? _selectedProfile;
 
     [ObservableProperty]
-    private string _profileName = "本機預設連線";
+    private string _profileName = LocalizationService.S("Settings_Profile_DefaultName");
 
     [ObservableProperty]
     private string _host = "localhost";
@@ -151,7 +156,7 @@ public partial class SettingsViewModel : ObservableObject
     public void NewProfile()
     {
         SelectedProfile = null;
-        ProfileName = "新連線設定檔";
+        ProfileName = LocalizationService.S("Settings_Profile_NewName");
         Host = "localhost";
         Port = 5432;
         Database = "postgres";
@@ -166,7 +171,9 @@ public partial class SettingsViewModel : ObservableObject
     public async Task SaveProfileAsync()
     {
         var profile = SelectedProfile ?? new ConnectionProfile();
-        profile.Name = string.IsNullOrWhiteSpace(ProfileName) ? "未命名連線" : ProfileName;
+        profile.Name = string.IsNullOrWhiteSpace(ProfileName)
+            ? LocalizationService.S("Settings_Profile_UnnamedName")
+            : ProfileName;
         profile.Host = Host;
         profile.Port = Port;
         profile.Database = Database;
@@ -178,7 +185,7 @@ public partial class SettingsViewModel : ObservableObject
         await LoadProfilesAsync();
         SelectedProfile = Profiles.FirstOrDefault(p => p.Id == profile.Id);
 
-        ConnectionStatusMessage = "連線設定檔已安全儲存（密碼已存放於 Windows 憑證庫）！";
+        ConnectionStatusMessage = LocalizationService.S("Settings_Profile_SavedMessage");
         IsConnectionSuccessful = true;
     }
 
@@ -208,13 +215,9 @@ public partial class SettingsViewModel : ObservableObject
             OnPropertyChanged(nameof(IsReady));
             OnPropertyChanged(nameof(ShowGuide));
             OnPropertyChanged(nameof(SourceDisplay));
+            OnPropertyChanged(nameof(ToolVersionDisplay));
 
-            StatusMessage = ToolResult.Status switch
-            {
-                ToolStatus.Ready => $"客戶端工具已就緒（版本: {ToolResult.Version}）",
-                ToolStatus.Incompatible => "警告：客戶端工具版本低於伺服器版本！",
-                _ => ToolResult.ErrorMessage ?? "未偵測到 PostgreSQL 客戶端工具"
-            };
+            RefreshToolStatusMessage();
         }
         finally
         {
@@ -222,12 +225,22 @@ public partial class SettingsViewModel : ObservableObject
         }
     }
 
+    private void RefreshToolStatusMessage()
+    {
+        StatusMessage = ToolResult.Status switch
+        {
+            ToolStatus.Ready => LocalizationService.S("Settings_ToolStatus_ReadyMessage", ToolResult.Version),
+            ToolStatus.Incompatible => LocalizationService.S("Settings_ToolStatus_IncompatibleMessage"),
+            _ => ToolResult.ErrorMessage ?? LocalizationService.S("Settings_ToolStatus_NotFoundMessage")
+        };
+    }
+
     [RelayCommand]
     private void BrowseCustomPath()
     {
         var dialog = new OpenFolderDialog
         {
-            Title = "選取 PostgreSQL 客戶端工具 bin 目錄",
+            Title = LocalizationService.S("Settings_Dialog_SelectBinDir"),
             InitialDirectory = string.IsNullOrWhiteSpace(CustomPath) ? @"C:\Program Files\PostgreSQL" : CustomPath
         };
 
@@ -279,7 +292,7 @@ public partial class SettingsViewModel : ObservableObject
         if (IsTestingConnection) return;
 
         IsTestingConnection = true;
-        ConnectionStatusMessage = "正在測試連線與比對版本相容性...";
+        ConnectionStatusMessage = LocalizationService.S("Settings_Connection_Testing");
         IsConnectionSuccessful = null;
         ServerVersionDisplay = string.Empty;
 
@@ -301,10 +314,11 @@ public partial class SettingsViewModel : ObservableObject
             if (checkResult.IsCompatible)
             {
                 IsConnectionSuccessful = true;
-                ConnectionStatusMessage = $"連線成功！{checkResult.Message}";
+                ConnectionStatusMessage = LocalizationService.S("Settings_Connection_SuccessMessage", checkResult.Message);
                 if (checkResult.ServerMajorVersion != null)
                 {
-                    ServerVersionDisplay = $"伺服器版本: PostgreSQL {checkResult.ServerMajorVersion} ({checkResult.ServerVersionString})";
+                    ServerVersionDisplay = LocalizationService.S(
+                        "Settings_ServerVersion_Format", checkResult.ServerMajorVersion, checkResult.ServerVersionString);
                 }
             }
             else
@@ -313,14 +327,15 @@ public partial class SettingsViewModel : ObservableObject
                 ConnectionStatusMessage = checkResult.Message;
                 if (checkResult.ServerMajorVersion != null)
                 {
-                    ServerVersionDisplay = $"伺服器版本: PostgreSQL {checkResult.ServerMajorVersion}（需至少客戶端工具同版本）";
+                    ServerVersionDisplay = LocalizationService.S(
+                        "Settings_ServerVersion_Incompatible", checkResult.ServerMajorVersion);
                 }
             }
         }
         catch (Exception ex)
         {
             IsConnectionSuccessful = false;
-            ConnectionStatusMessage = $"連線測試失敗: {ex.Message}";
+            ConnectionStatusMessage = LocalizationService.S("Settings_Connection_TestFailed", ex.Message);
         }
         finally
         {

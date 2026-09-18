@@ -1,3 +1,5 @@
+using PostgresBackup.Core.Resources;
+
 namespace PostgresBackup.Core.Models;
 
 /// <summary>
@@ -33,13 +35,14 @@ public class BackupRecord
         }
     }
 
-    public string FormattedDuration => $"{(double)DurationMs / 1000:F2} 秒";
+    public string FormattedDuration =>
+        CoreStrings.Format("Format_DurationSeconds", ((double)DurationMs / 1000).ToString("F2"));
 
     public string OperationTypeDisplay => OperationType switch
     {
-        BackupOperationType.Backup => "備份作業",
-        BackupOperationType.Restore => "還原作業",
-        BackupOperationType.PreRestoreSnapshot => "還原前安全快照",
+        BackupOperationType.Backup => CoreStrings.Get("OperationType_Backup"),
+        BackupOperationType.Restore => CoreStrings.Get("OperationType_Restore"),
+        BackupOperationType.PreRestoreSnapshot => CoreStrings.Get("OperationType_PreRestoreSnapshot"),
         _ => OperationType.ToString()
     };
 }

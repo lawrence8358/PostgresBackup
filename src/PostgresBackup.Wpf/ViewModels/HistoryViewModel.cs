@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PostgresBackup.Core.Interfaces;
 using PostgresBackup.Core.Models;
+using PostgresBackup.Wpf.Services;
 
 namespace PostgresBackup.Wpf.ViewModels;
 
@@ -34,10 +35,26 @@ public partial class HistoryViewModel : ObservableObject
     [ObservableProperty]
     private bool _isLoading;
 
+    private bool _isDemoMode;
+
+    /// <summary>
+    /// 以指定的示範紀錄取代歷史清單，並停用資料庫載入。
+    /// 供 --capture 自動化截圖使用，避免將本機真實稽核資料帶入文件截圖。
+    /// </summary>
+    public void LoadDemoRecords(IEnumerable<BackupRecord> records)
+    {
+        _isDemoMode = true;
+        Records.Clear();
+        foreach (var record in records)
+        {
+            Records.Add(record);
+        }
+    }
+
     [RelayCommand]
     public async Task LoadRecordsAsync()
     {
-        if (IsLoading) return;
+        if (IsLoading || _isDemoMode) return;
 
         IsLoading = true;
         try
@@ -101,13 +118,21 @@ public partial class HistoryViewModel : ObservableObject
                 }
                 else
                 {
-                    MessageBox.Show($"檔案或資料夾已不存在：\n{target.FilePath}", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show(
+                        LocalizationService.S("History_Msg_FileMissing", target.FilePath),
+                        LocalizationService.S("Common_Notice"),
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
                 }
             }
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"無法開啟檔案總管: {ex.Message}", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(
+                LocalizationService.S("History_Msg_ExplorerFailed", ex.Message),
+                LocalizationService.S("Common_Error"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
     }
 
@@ -127,8 +152,8 @@ public partial class HistoryViewModel : ObservableObject
         if (target == null) return;
 
         var confirm = MessageBox.Show(
-            $"確定要自歷史紀錄中刪除此項紀錄嗎？（實體檔案將被保留）\n資料庫: {target.DatabaseName}\n檔案: {target.FilePath}",
-            "確認刪除",
+            LocalizationService.S("History_Msg_ConfirmDelete", target.DatabaseName, target.FilePath),
+            LocalizationService.S("History_Msg_ConfirmDeleteTitle"),
             MessageBoxButton.YesNo,
             MessageBoxImage.Question);
 

@@ -1,3 +1,5 @@
+using PostgresBackup.Core.Resources;
+
 namespace PostgresBackup.Core.Models;
 
 /// <summary>
@@ -18,7 +20,7 @@ public record VersionCheckResult
             ClientVersion = clientVersion,
             ServerMajorVersion = serverMajor,
             ServerVersionString = serverVersionString,
-            Message = $"客戶端工具版本相容（客戶端: {clientVersion}, 伺服器: {serverVersionString ?? serverMajor.ToString()}）。"
+            Message = CoreStrings.Format("Version_Compatible", clientVersion, serverVersionString ?? serverMajor.ToString())
         };
 
     public static VersionCheckResult Incompatible(ToolVersion clientVersion, int serverMajor, string? serverVersionString = null) =>
@@ -28,7 +30,7 @@ public record VersionCheckResult
             ClientVersion = clientVersion,
             ServerMajorVersion = serverMajor,
             ServerVersionString = serverVersionString,
-            Message = $"版本不相容警告：客戶端工具主版本 ({clientVersion.Major}) 低於資料庫伺服器主版本 ({serverMajor})。PostgreSQL 官方要求 pg_dump 版本必須大於或等於伺服器版本以確保備份完整性。"
+            Message = CoreStrings.Format("Version_Incompatible", clientVersion.Major, serverMajor)
         };
 
     public static VersionCheckResult Failed(string reason) =>

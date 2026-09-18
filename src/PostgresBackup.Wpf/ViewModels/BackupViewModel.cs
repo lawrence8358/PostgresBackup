@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PostgresBackup.Core.Interfaces;
 using PostgresBackup.Core.Models;
+using PostgresBackup.Wpf.Services;
 
 namespace PostgresBackup.Wpf.ViewModels;
 
@@ -26,6 +27,13 @@ public partial class BackupViewModel : ObservableObject
         _outputDirectory = Path.Combine(docs, "PostgresBackups");
 
         UpdateFileNamePreview();
+        ResetStatusToIdle();
+
+        // 閒置狀態下的狀態文字須隨語系切換重新在地化；作業進行中或已完成的訊息則保留原文。
+        LocalizationService.Instance.PropertyChanged += (_, _) =>
+        {
+            if (_isStatusIdle) ResetStatusToIdle();
+        };
     }
 
     public ObservableCollection<ConnectionProfile> Profiles { get; } = [];
@@ -58,10 +66,19 @@ public partial class BackupViewModel : ObservableObject
     private bool _isBackingUp;
 
     [ObservableProperty]
-    private string _statusMessage = "準備就緒";
+    private string _statusMessage = string.Empty;
 
     [ObservableProperty]
-    private string _statusBadgeText = "就緒";
+    private string _statusBadgeText = string.Empty;
+
+    private bool _isStatusIdle = true;
+
+    private void ResetStatusToIdle()
+    {
+        _isStatusIdle = true;
+        StatusBadgeText = LocalizationService.S("Status_Idle");
+        StatusMessage = LocalizationService.S("Status_Idle_Message");
+    }
 
     [ObservableProperty]
     private string _terminalOutput = string.Empty;
@@ -113,7 +130,7 @@ public partial class BackupViewModel : ObservableObject
     {
         var dialog = new OpenFolderDialog
         {
-            Title = "選取備份檔案存放目錄",
+            Title = LocalizationService.S("Backup_Dialog_SelectOutputDir"),
             InitialDirectory = OutputDirectory
         };
 
@@ -130,14 +147,19 @@ public partial class BackupViewModel : ObservableObject
 
         if (SelectedProfile == null)
         {
-            MessageBox.Show("請先選取連線設定檔！若無設定檔，請先至「設定」頁面建立。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(
+                LocalizationService.S("Backup_Msg_NoProfile"),
+                LocalizationService.S("Common_Notice"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
             return;
         }
 
         IsBackingUp = true;
-        StatusBadgeText = "執行中";
-        StatusMessage = "正在執行備份作業...";
-        AppendLog($"[{DateTime.Now:HH:mm:ss}] === 開始備份作業 ===");
+        _isStatusIdle = false;
+        StatusBadgeText = LocalizationService.S("Status_Running");
+        StatusMessage = LocalizationService.S("Backup_Status_Running");
+        AppendLog($"[{DateTime.Now:HH:mm:ss}] {LocalizationService.S("Backup_Log_Start")}");
 
         try
         {
@@ -169,19 +191,19 @@ public partial class BackupViewModel : ObservableObject
 
             if (result.IsSuccess)
             {
-                StatusBadgeText = "完成";
-                StatusMessage = $"備份成功！產出檔案：{Path.GetFileName(result.OutputFilePath)}";
+                StatusBadgeText = LocalizationService.S("Status_Completed");
+                StatusMessage = LocalizationService.S("Backup_Status_Success", Path.GetFileName(result.OutputFilePath));
             }
             else
             {
-                StatusBadgeText = "失敗";
-                StatusMessage = $"備份失敗：{result.ErrorMessage}";
+                StatusBadgeText = LocalizationService.S("Status_Failed");
+                StatusMessage = LocalizationService.S("Backup_Status_Failed", result.ErrorMessage);
             }
         }
         catch (Exception ex)
         {
-            StatusBadgeText = "錯誤";
-            StatusMessage = $"發生未預期錯誤: {ex.Message}";
+            StatusBadgeText = LocalizationService.S("Status_Error");
+            StatusMessage = LocalizationService.S("Common_UnexpectedError", ex.Message);
             AppendLog($"[ERROR] {ex.Message}");
         }
         finally

@@ -1,5 +1,7 @@
 using System.Text.RegularExpressions;
 
+using PostgresBackup.Core.Resources;
+
 namespace PostgresBackup.Core.Models;
 
 /// <summary>
@@ -69,7 +71,7 @@ public partial record ToolVersion : IComparable<ToolVersion>
             return version;
         }
 
-        throw new FormatException($"無法從「{raw}」中解析 PostgreSQL 版本號。");
+        throw new FormatException(CoreStrings.Format("Error_VersionParseFailed", raw));
     }
 
     public int CompareTo(ToolVersion? other)

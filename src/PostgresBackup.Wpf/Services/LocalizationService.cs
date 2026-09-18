@@ -23,11 +23,20 @@ public sealed class LocalizationService : INotifyPropertyChanged
         new Language("en", "English"),
     ];
 
+    // 英文以 InvariantCulture 表示（中性資源即為英文），其 Name 為空字串，
+    // 故須映射回 "en"，否則語系切換器初值會誤選為繁體中文並將介面切回中文。
     public string CurrentLanguageCode =>
-        string.IsNullOrEmpty(_currentCulture.Name) ? "zh-TW" : _currentCulture.Name;
+        string.IsNullOrEmpty(_currentCulture.Name) ? "en" : _currentCulture.Name;
 
     public string this[string key] =>
         Strings.ResourceManager.GetString(key, _currentCulture) ?? $"[{key}]";
+
+    /// <summary>取得目前語系之字串資源。</summary>
+    public static string S(string key) => Instance[key];
+
+    /// <summary>取得目前語系之字串資源並套用格式化引數。</summary>
+    public static string S(string key, params object?[] args) =>
+        string.Format(Instance[key], args);
 
     public void SetLanguage(string cultureCode)
     {

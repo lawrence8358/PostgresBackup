@@ -76,4 +76,109 @@
   <data name="Version_Incompatible" xml:space="preserve">
     <value>Version incompatible warning: client tool major version ({0}) is lower than database server major version ({1}). Official PostgreSQL policy requires pg_dump version &gt;= server version.</value>
   </data>
+  <data name="Format_DurationSeconds" xml:space="preserve">
+    <value>{0} s</value>
+  </data>
+  <data name="OperationType_Backup" xml:space="preserve">
+    <value>Backup</value>
+  </data>
+  <data name="OperationType_Restore" xml:space="preserve">
+    <value>Restore</value>
+  </data>
+  <data name="OperationType_PreRestoreSnapshot" xml:space="preserve">
+    <value>Pre-Restore Snapshot</value>
+  </data>
+  <data name="Profile_DefaultName" xml:space="preserve">
+    <value>Default Connection</value>
+  </data>
+  <data name="Error_VersionParseFailed" xml:space="preserve">
+    <value>Could not parse a PostgreSQL version number from "{0}".</value>
+  </data>
+  <data name="Backup_Error_PgDumpNotFound" xml:space="preserve">
+    <value>PostgreSQL client tools (pg_dump) were not detected. Confirm the installation or set the tools directory on the Settings page.</value>
+  </data>
+  <data name="Backup_Log_Start" xml:space="preserve">
+    <value>Starting backup: database '{0}'</value>
+  </data>
+  <data name="Backup_Log_Options" xml:space="preserve">
+    <value>Format: {0}, Mode: {1}, Scope: {2}</value>
+  </data>
+  <data name="Backup_Log_OutputPath" xml:space="preserve">
+    <value>Output path: {0}</value>
+  </data>
+  <data name="Backup_Log_Tool" xml:space="preserve">
+    <value>Tool: {0}</value>
+  </data>
+  <data name="Backup_Log_Success" xml:space="preserve">
+    <value>Backup completed successfully.</value>
+  </data>
+  <data name="Backup_Log_FileInfo" xml:space="preserve">
+    <value>Output file size: {0}, duration: {1}</value>
+  </data>
+  <data name="Backup_Log_HistoryWriteFailed" xml:space="preserve">
+    <value>Failed to write to the history repository: {0}</value>
+  </data>
+  <data name="Backup_Error_NonZeroExit" xml:space="preserve">
+    <value>Backup failed: pg_dump returned a non-zero exit code.</value>
+  </data>
+  <data name="Backup_Log_Failed" xml:space="preserve">
+    <value>Backup failed (exit code: {0})</value>
+  </data>
+  <data name="Backup_Log_ErrorDetail" xml:space="preserve">
+    <value>Error message: {0}</value>
+  </data>
+  <data name="Process_Error_CannotStart" xml:space="preserve">
+    <value>Could not start the process: {0}</value>
+  </data>
+  <data name="Process_Error_Exception" xml:space="preserve">
+    <value>An exception occurred while running the process: {0}</value>
+  </data>
+  <data name="Restore_Error_SourceMissing" xml:space="preserve">
+    <value>The source backup file does not exist: '{0}'</value>
+  </data>
+  <data name="Restore_Error_ToolsNotFound" xml:space="preserve">
+    <value>The official PostgreSQL client tools were not detected. Confirm the installation on the Settings page.</value>
+  </data>
+  <data name="Restore_Error_ToolMissing" xml:space="preserve">
+    <value>The official tool required for this operation was not found: {0}</value>
+  </data>
+  <data name="Restore_Log_SnapshotStart" xml:space="preserve">
+    <value>Creating a pre-restore safety snapshot of target database '{0}'...</value>
+  </data>
+  <data name="Restore_Error_SnapshotServiceMissing" xml:space="preserve">
+    <value>Safety snapshot failed: the backup service (IBackupService) was not injected. The restore was aborted to protect the existing database.</value>
+  </data>
+  <data name="Restore_Error_SnapshotFailed" xml:space="preserve">
+    <value>Safety snapshot failed (exit code: {0}): {1}. The restore was aborted to protect the existing database.</value>
+  </data>
+  <data name="Restore_Error_SnapshotFileMissing" xml:space="preserve">
+    <value>the snapshot file could not be produced</value>
+  </data>
+  <data name="Restore_Log_SnapshotSuccess" xml:space="preserve">
+    <value>Safety snapshot created (size: {0} bytes)</value>
+  </data>
+  <data name="Restore_Log_Start" xml:space="preserve">
+    <value>Starting restore: tool '{0}', target database '{1}'</value>
+  </data>
+  <data name="Restore_Log_SourceFile" xml:space="preserve">
+    <value>Source file: {0}</value>
+  </data>
+  <data name="Restore_Log_Mode" xml:space="preserve">
+    <value>Restore mode: {0}</value>
+  </data>
+  <data name="Restore_Log_Success" xml:space="preserve">
+    <value>Restore completed successfully. Total duration: {0}</value>
+  </data>
+  <data name="Restore_Error_NonZeroExit" xml:space="preserve">
+    <value>Restore failed: the tool returned a non-zero exit code.</value>
+  </data>
+  <data name="Restore_Log_Failed" xml:space="preserve">
+    <value>Restore failed (exit code: {0}): {1}</value>
+  </data>
+  <data name="ToolDetection_Error_NotReady" xml:space="preserve">
+    <value>The client tools are not ready, so the version compatibility check cannot run.</value>
+  </data>
+  <data name="ToolDetection_Error_ServerCheckFailed" xml:space="preserve">
+    <value>Could not connect to the database to verify the server version: {0}</value>
+  </data>
 </root>

@@ -397,4 +397,178 @@
   <data name="Settings_Guide_EdbDownload" xml:space="preserve">
     <value>EnterpriseDB (EDB) 下載專區</value>
   </data>
+  <data name="App_WindowTitle" xml:space="preserve">
+    <value>PostgresBackup — PostgreSQL 官方工具備份與還原</value>
+  </data>
+  <data name="Nav_Placeholder" xml:space="preserve">
+    <value>「{0}」模組</value>
+  </data>
+  <data name="Common_Notice" xml:space="preserve">
+    <value>提示</value>
+  </data>
+  <data name="Common_Warning" xml:space="preserve">
+    <value>警告</value>
+  </data>
+  <data name="Common_Error" xml:space="preserve">
+    <value>錯誤</value>
+  </data>
+  <data name="Common_UnexpectedError" xml:space="preserve">
+    <value>發生未預期錯誤: {0}</value>
+  </data>
+  <data name="Status_Idle" xml:space="preserve">
+    <value>就緒</value>
+  </data>
+  <data name="Status_Idle_Message" xml:space="preserve">
+    <value>準備就緒</value>
+  </data>
+  <data name="Status_Running" xml:space="preserve">
+    <value>執行中</value>
+  </data>
+  <data name="Status_Restoring" xml:space="preserve">
+    <value>還原中</value>
+  </data>
+  <data name="Status_Completed" xml:space="preserve">
+    <value>完成</value>
+  </data>
+  <data name="Status_Failed" xml:space="preserve">
+    <value>失敗</value>
+  </data>
+  <data name="Status_Error" xml:space="preserve">
+    <value>錯誤</value>
+  </data>
+  <data name="Log_Header" xml:space="preserve">
+    <value>=== PostgresBackup 系統日誌記錄 ===</value>
+  </data>
+  <data name="Log_Header_Cleared" xml:space="preserve">
+    <value>=== PostgresBackup 系統日誌記錄 (已清空) ===</value>
+  </data>
+  <data name="Backup_Dialog_SelectOutputDir" xml:space="preserve">
+    <value>選取備份檔案存放目錄</value>
+  </data>
+  <data name="Backup_Msg_NoProfile" xml:space="preserve">
+    <value>請先選取連線設定檔！若無設定檔，請先至「設定」頁面建立。</value>
+  </data>
+  <data name="Backup_Status_Running" xml:space="preserve">
+    <value>正在執行備份作業...</value>
+  </data>
+  <data name="Backup_Log_Start" xml:space="preserve">
+    <value>=== 開始備份作業 ===</value>
+  </data>
+  <data name="Backup_Status_Success" xml:space="preserve">
+    <value>備份成功！產出檔案：{0}</value>
+  </data>
+  <data name="Backup_Status_Failed" xml:space="preserve">
+    <value>備份失敗：{0}</value>
+  </data>
+  <data name="Restore_SourceFile_Placeholder" xml:space="preserve">
+    <value>請選取 .dump 或 .sql 備份檔案</value>
+  </data>
+  <data name="Restore_Dialog_SelectSourceFile" xml:space="preserve">
+    <value>選取備份檔案</value>
+  </data>
+  <data name="Restore_Dialog_FileFilter" xml:space="preserve">
+    <value>PostgreSQL 備份檔案 (*.dump;*.sql)|*.dump;*.sql|自訂二進位 (*.dump)|*.dump|純文字腳本 (*.sql)|*.sql|所有檔案 (*.*)|*.*</value>
+  </data>
+  <data name="Restore_Msg_NoSourceFile" xml:space="preserve">
+    <value>請先指定有效且存在的備份來源檔案！</value>
+  </data>
+  <data name="Restore_Msg_NoProfile" xml:space="preserve">
+    <value>請先選取目標連線設定檔！</value>
+  </data>
+  <data name="Restore_Msg_NotConfirmed" xml:space="preserve">
+    <value>請勾選「高危險操作確認」方塊以確認您已了解資料覆寫風險！</value>
+  </data>
+  <data name="Restore_Msg_SafetyGuardTitle" xml:space="preserve">
+    <value>安全防護提醒</value>
+  </data>
+  <data name="Restore_Status_Running" xml:space="preserve">
+    <value>正在執行安全還原作業...</value>
+  </data>
+  <data name="Restore_Log_Start" xml:space="preserve">
+    <value>=== 啟動安全還原程序 ===</value>
+  </data>
+  <data name="Restore_Status_Success" xml:space="preserve">
+    <value>資料庫還原順利完成！</value>
+  </data>
+  <data name="Restore_Status_SnapshotSaved" xml:space="preserve">
+    <value>（已儲存安全快照: {0}）</value>
+  </data>
+  <data name="Restore_Status_Failed" xml:space="preserve">
+    <value>還原作業中止或失敗：{0}</value>
+  </data>
+  <data name="History_Msg_FileMissing" xml:space="preserve">
+    <value>檔案或資料夾已不存在：&#10;{0}</value>
+  </data>
+  <data name="History_Msg_ExplorerFailed" xml:space="preserve">
+    <value>無法開啟檔案總管: {0}</value>
+  </data>
+  <data name="History_Msg_ConfirmDelete" xml:space="preserve">
+    <value>確定要自歷史紀錄中刪除此項紀錄嗎？（實體檔案將被保留）&#10;資料庫: {0}&#10;檔案: {1}</value>
+  </data>
+  <data name="History_Msg_ConfirmDeleteTitle" xml:space="preserve">
+    <value>確認刪除</value>
+  </data>
+  <data name="Settings_ToolSource_Format" xml:space="preserve">
+    <value>來源: {0}</value>
+  </data>
+  <data name="Settings_ToolVersion_Format" xml:space="preserve">
+    <value>版本: {0}</value>
+  </data>
+  <data name="Settings_ToolStatus_AllReady" xml:space="preserve">
+    <value>pg_dump • pg_restore • psql 均已就緒</value>
+  </data>
+  <data name="Settings_Source_CustomPath" xml:space="preserve">
+    <value>使用者指定目錄 (Custom Path)</value>
+  </data>
+  <data name="Settings_Source_Path" xml:space="preserve">
+    <value>系統 PATH 環境變數 (System PATH)</value>
+  </data>
+  <data name="Settings_Source_CommonDirectory" xml:space="preserve">
+    <value>標準安裝目錄 (C:\Program Files\PostgreSQL)</value>
+  </data>
+  <data name="Settings_Source_Registry" xml:space="preserve">
+    <value>Windows Registry 登錄檔</value>
+  </data>
+  <data name="Settings_Source_None" xml:space="preserve">
+    <value>無 (None)</value>
+  </data>
+  <data name="Settings_ToolStatus_ReadyMessage" xml:space="preserve">
+    <value>客戶端工具已就緒（版本: {0}）</value>
+  </data>
+  <data name="Settings_ToolStatus_IncompatibleMessage" xml:space="preserve">
+    <value>警告：客戶端工具版本低於伺服器版本！</value>
+  </data>
+  <data name="Settings_ToolStatus_NotFoundMessage" xml:space="preserve">
+    <value>未偵測到 PostgreSQL 客戶端工具</value>
+  </data>
+  <data name="Settings_Dialog_SelectBinDir" xml:space="preserve">
+    <value>選取 PostgreSQL 客戶端工具 bin 目錄</value>
+  </data>
+  <data name="Settings_Profile_DefaultName" xml:space="preserve">
+    <value>本機預設連線</value>
+  </data>
+  <data name="Settings_Profile_NewName" xml:space="preserve">
+    <value>新連線設定檔</value>
+  </data>
+  <data name="Settings_Profile_UnnamedName" xml:space="preserve">
+    <value>未命名連線</value>
+  </data>
+  <data name="Settings_Profile_SavedMessage" xml:space="preserve">
+    <value>連線設定檔已安全儲存（密碼已存放於 Windows 憑證庫）！</value>
+  </data>
+  <data name="Settings_Connection_Testing" xml:space="preserve">
+    <value>正在測試連線與比對版本相容性...</value>
+  </data>
+  <data name="Settings_Connection_SuccessMessage" xml:space="preserve">
+    <value>連線成功！{0}</value>
+  </data>
+  <data name="Settings_Connection_TestFailed" xml:space="preserve">
+    <value>連線測試失敗: {0}</value>
+  </data>
+  <data name="Settings_ServerVersion_Format" xml:space="preserve">
+    <value>伺服器版本: PostgreSQL {0} ({1})</value>
+  </data>
+  <data name="Settings_ServerVersion_Incompatible" xml:space="preserve">
+    <value>伺服器版本: PostgreSQL {0}（需至少客戶端工具同版本）</value>
+  </data>
 </root>

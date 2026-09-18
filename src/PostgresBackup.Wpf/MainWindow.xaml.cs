@@ -121,7 +121,7 @@ public partial class MainWindow
                     HorizontalAlignment = HorizontalAlignment.Center,
                     Child = new TextBlock
                     {
-                        Text = $"「{pageName}」模組",
+                        Text = LocalizationService.S("Nav_Placeholder", pageName),
                         FontSize = 16,
                         Foreground = System.Windows.Media.Brushes.Gray
                     }

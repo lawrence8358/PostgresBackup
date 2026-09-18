@@ -49,6 +49,8 @@
                                    FontSize="10"
                                    Foreground="#CCFFFFFF"
                                    HorizontalAlignment="Center"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap"
                                    Margin="0,2,0,0"/>
                     </StackPanel>
                 </Border>

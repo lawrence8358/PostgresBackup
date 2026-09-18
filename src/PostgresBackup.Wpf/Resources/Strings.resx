@@ -397,4 +397,178 @@
   <data name="Settings_Guide_EdbDownload" xml:space="preserve">
     <value>EnterpriseDB (EDB) Downloads</value>
   </data>
+  <data name="App_WindowTitle" xml:space="preserve">
+    <value>PostgresBackup — PostgreSQL Backup &amp; Restore (Official Tools)</value>
+  </data>
+  <data name="Nav_Placeholder" xml:space="preserve">
+    <value>"{0}" module</value>
+  </data>
+  <data name="Common_Notice" xml:space="preserve">
+    <value>Notice</value>
+  </data>
+  <data name="Common_Warning" xml:space="preserve">
+    <value>Warning</value>
+  </data>
+  <data name="Common_Error" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="Common_UnexpectedError" xml:space="preserve">
+    <value>Unexpected error: {0}</value>
+  </data>
+  <data name="Status_Idle" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="Status_Idle_Message" xml:space="preserve">
+    <value>Ready to start</value>
+  </data>
+  <data name="Status_Running" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="Status_Restoring" xml:space="preserve">
+    <value>Restoring</value>
+  </data>
+  <data name="Status_Completed" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="Status_Failed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="Status_Error" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="Log_Header" xml:space="preserve">
+    <value>=== PostgresBackup System Log ===</value>
+  </data>
+  <data name="Log_Header_Cleared" xml:space="preserve">
+    <value>=== PostgresBackup System Log (cleared) ===</value>
+  </data>
+  <data name="Backup_Dialog_SelectOutputDir" xml:space="preserve">
+    <value>Select the backup output directory</value>
+  </data>
+  <data name="Backup_Msg_NoProfile" xml:space="preserve">
+    <value>Select a connection profile first. If you have none, create one on the Settings page.</value>
+  </data>
+  <data name="Backup_Status_Running" xml:space="preserve">
+    <value>Backup in progress...</value>
+  </data>
+  <data name="Backup_Log_Start" xml:space="preserve">
+    <value>=== Backup started ===</value>
+  </data>
+  <data name="Backup_Status_Success" xml:space="preserve">
+    <value>Backup succeeded. Output file: {0}</value>
+  </data>
+  <data name="Backup_Status_Failed" xml:space="preserve">
+    <value>Backup failed: {0}</value>
+  </data>
+  <data name="Restore_SourceFile_Placeholder" xml:space="preserve">
+    <value>Select a .dump or .sql backup file</value>
+  </data>
+  <data name="Restore_Dialog_SelectSourceFile" xml:space="preserve">
+    <value>Select a backup file</value>
+  </data>
+  <data name="Restore_Dialog_FileFilter" xml:space="preserve">
+    <value>PostgreSQL backups (*.dump;*.sql)|*.dump;*.sql|Custom binary (*.dump)|*.dump|Plain SQL script (*.sql)|*.sql|All files (*.*)|*.*</value>
+  </data>
+  <data name="Restore_Msg_NoSourceFile" xml:space="preserve">
+    <value>Select a valid, existing backup source file first.</value>
+  </data>
+  <data name="Restore_Msg_NoProfile" xml:space="preserve">
+    <value>Select a target connection profile first.</value>
+  </data>
+  <data name="Restore_Msg_NotConfirmed" xml:space="preserve">
+    <value>Tick the high-risk action confirmation box to confirm that you understand the overwrite risk.</value>
+  </data>
+  <data name="Restore_Msg_SafetyGuardTitle" xml:space="preserve">
+    <value>Safety Guard</value>
+  </data>
+  <data name="Restore_Status_Running" xml:space="preserve">
+    <value>Safe restore in progress...</value>
+  </data>
+  <data name="Restore_Log_Start" xml:space="preserve">
+    <value>=== Safe restore started ===</value>
+  </data>
+  <data name="Restore_Status_Success" xml:space="preserve">
+    <value>Database restore completed successfully.</value>
+  </data>
+  <data name="Restore_Status_SnapshotSaved" xml:space="preserve">
+    <value> (safety snapshot saved: {0})</value>
+  </data>
+  <data name="Restore_Status_Failed" xml:space="preserve">
+    <value>Restore aborted or failed: {0}</value>
+  </data>
+  <data name="History_Msg_FileMissing" xml:space="preserve">
+    <value>The file or folder no longer exists:&#10;{0}</value>
+  </data>
+  <data name="History_Msg_ExplorerFailed" xml:space="preserve">
+    <value>Could not open File Explorer: {0}</value>
+  </data>
+  <data name="History_Msg_ConfirmDelete" xml:space="preserve">
+    <value>Delete this entry from the history? (The backup file itself is kept.)&#10;Database: {0}&#10;File: {1}</value>
+  </data>
+  <data name="History_Msg_ConfirmDeleteTitle" xml:space="preserve">
+    <value>Confirm Delete</value>
+  </data>
+  <data name="Settings_ToolSource_Format" xml:space="preserve">
+    <value>Source: {0}</value>
+  </data>
+  <data name="Settings_ToolVersion_Format" xml:space="preserve">
+    <value>Version: {0}</value>
+  </data>
+  <data name="Settings_ToolStatus_AllReady" xml:space="preserve">
+    <value>pg_dump • pg_restore • psql all ready</value>
+  </data>
+  <data name="Settings_Source_CustomPath" xml:space="preserve">
+    <value>User-specified directory (Custom Path)</value>
+  </data>
+  <data name="Settings_Source_Path" xml:space="preserve">
+    <value>System PATH environment variable</value>
+  </data>
+  <data name="Settings_Source_CommonDirectory" xml:space="preserve">
+    <value>Standard install directory (C:\Program Files\PostgreSQL)</value>
+  </data>
+  <data name="Settings_Source_Registry" xml:space="preserve">
+    <value>Windows Registry</value>
+  </data>
+  <data name="Settings_Source_None" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="Settings_ToolStatus_ReadyMessage" xml:space="preserve">
+    <value>Client tools ready (version: {0})</value>
+  </data>
+  <data name="Settings_ToolStatus_IncompatibleMessage" xml:space="preserve">
+    <value>Warning: the client tool version is older than the server version.</value>
+  </data>
+  <data name="Settings_ToolStatus_NotFoundMessage" xml:space="preserve">
+    <value>PostgreSQL client tools were not detected.</value>
+  </data>
+  <data name="Settings_Dialog_SelectBinDir" xml:space="preserve">
+    <value>Select the PostgreSQL client tools bin directory</value>
+  </data>
+  <data name="Settings_Profile_DefaultName" xml:space="preserve">
+    <value>Local PostgreSQL</value>
+  </data>
+  <data name="Settings_Profile_NewName" xml:space="preserve">
+    <value>New Connection Profile</value>
+  </data>
+  <data name="Settings_Profile_UnnamedName" xml:space="preserve">
+    <value>Unnamed Connection</value>
+  </data>
+  <data name="Settings_Profile_SavedMessage" xml:space="preserve">
+    <value>Connection profile saved. The password is stored in Windows Credential Manager.</value>
+  </data>
+  <data name="Settings_Connection_Testing" xml:space="preserve">
+    <value>Testing the connection and checking version compatibility...</value>
+  </data>
+  <data name="Settings_Connection_SuccessMessage" xml:space="preserve">
+    <value>Connected. {0}</value>
+  </data>
+  <data name="Settings_Connection_TestFailed" xml:space="preserve">
+    <value>Connection test failed: {0}</value>
+  </data>
+  <data name="Settings_ServerVersion_Format" xml:space="preserve">
+    <value>Server version: PostgreSQL {0} ({1})</value>
+  </data>
+  <data name="Settings_ServerVersion_Incompatible" xml:space="preserve">
+    <value>Server version: PostgreSQL {0} (client tools must be at least this version)</value>
+  </data>
 </root>

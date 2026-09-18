@@ -1,12 +1,12 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using PostgresBackup.Core.Models;
+using PostgresBackup.Wpf.Services;
 
 namespace PostgresBackup.Wpf.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
-    [ObservableProperty]
-    private string _windowTitle = "PostgresBackup — PostgreSQL 官方工具備份與還原";
+    public string WindowTitle => LocalizationService.S("App_WindowTitle");
 
     public SettingsViewModel Settings { get; }
     public BackupViewModel Backup { get; }
@@ -30,6 +30,8 @@ public partial class MainViewModel : ObservableObject
         Log = log;
 
         History.RequestRestore += OnRequestRestore;
+
+        LocalizationService.Instance.PropertyChanged += (_, _) => OnPropertyChanged(nameof(WindowTitle));
     }
 
     private void OnRequestRestore(BackupRecord record)

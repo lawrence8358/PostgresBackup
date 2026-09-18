@@ -2,6 +2,8 @@ using System.Diagnostics;
 using PostgresBackup.Core.Interfaces;
 using PostgresBackup.Core.Models;
 
+using PostgresBackup.Core.Resources;
+
 namespace PostgresBackup.Core.Services;
 
 /// <summary>
@@ -38,7 +40,7 @@ public class RestoreService : IRestoreService
         // 1. 驗證來源檔案是否存在
         if (!File.Exists(options.SourceFilePath))
         {
-            var errMsg = $"來源備份檔案不存在: '{options.SourceFilePath}'";
+            var errMsg = CoreStrings.Format("Restore_Error_SourceMissing", options.SourceFilePath);
             onLogLine?.Invoke($"[ERROR] {errMsg}");
             return RestoreResult.Failure(errMsg, -1, TimeSpan.Zero, string.Empty);
         }
@@ -53,7 +55,7 @@ public class RestoreService : IRestoreService
         var detection = await _toolDetector.DetectAsync(options.ClientToolDirectory, ct);
         if (!detection.IsReady)
         {
-            var errMsg = "未偵測到 PostgreSQL 官方客戶端工具！請先於設定頁面確認安裝。";
+            var errMsg = CoreStrings.Get("Restore_Error_ToolsNotFound");
             onLogLine?.Invoke($"[ERROR] {errMsg}");
             return RestoreResult.Failure(errMsg, -1, TimeSpan.Zero, string.Empty);
         }
@@ -65,7 +67,7 @@ public class RestoreService : IRestoreService
         if (string.IsNullOrWhiteSpace(toolExecutablePath))
         {
             var toolName = options.Format == BackupFormat.Custom ? "pg_restore" : "psql";
-            var errMsg = $"未找到執行所需之官方工具: {toolName}";
+            var errMsg = CoreStrings.Format("Restore_Error_ToolMissing", toolName);
             onLogLine?.Invoke($"[ERROR] {errMsg}");
             return RestoreResult.Failure(errMsg, -1, TimeSpan.Zero, string.Empty);
         }
@@ -79,7 +81,7 @@ public class RestoreService : IRestoreService
         // 3. 還原前安全快照 (Pre-Restore Snapshot) — 透過 BackupService 作業模組安全委任
         if (options.CreatePreRestoreSnapshot)
         {
-            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [SAFETY] 正在對目標資料庫 '{targetDb}' 執行還原前安全快照 (Pre-Restore Snapshot)...");
+            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [SAFETY] {CoreStrings.Format("Restore_Log_SnapshotStart", targetDb)}");
 
             var snapshotDir = options.SnapshotDirectory;
             if (string.IsNullOrWhiteSpace(snapshotDir))
@@ -113,7 +115,7 @@ public class RestoreService : IRestoreService
 
             if (_backupService == null)
             {
-                var errMsg = "安全快照失敗：未注入備份作業服務 (IBackupService)，為保護既有資料庫，已強制終止還原作業。";
+                var errMsg = CoreStrings.Get("Restore_Error_SnapshotServiceMissing");
                 onLogLine?.Invoke($"[CRITICAL ABORT] {errMsg}");
                 return RestoreResult.Failure(errMsg, -1, stopwatch.Elapsed, string.Empty);
             }
@@ -125,22 +127,25 @@ public class RestoreService : IRestoreService
 
             if (!snapshotResult.IsSuccess)
             {
-                var errMsg = $"安全快照建立失敗 (ExitCode: {snapshotResult.ExitCode}): {snapshotResult.ErrorMessage ?? "無法產生快照檔案"}。為保護既有資料庫免受破壞，系統已強制終止還原作業！";
+                var errMsg = CoreStrings.Format(
+                    "Restore_Error_SnapshotFailed",
+                    snapshotResult.ExitCode,
+                    snapshotResult.ErrorMessage ?? CoreStrings.Get("Restore_Error_SnapshotFileMissing"));
                 onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [CRITICAL ABORT] {errMsg}");
                 return RestoreResult.Failure(errMsg, snapshotResult.ExitCode, stopwatch.Elapsed, snapshotResult.Arguments);
             }
 
             snapshotFilePath = snapshotResult.OutputFilePath;
-            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [SAFETY SUCCESS] 安全快照已建立完畢（大小: {snapshotResult.FileSizeBytes} 位元組）");
+            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [SAFETY SUCCESS] {CoreStrings.Format("Restore_Log_SnapshotSuccess", snapshotResult.FileSizeBytes)}");
         }
 
         // 4. 執行還原作業
         var restoreArgs = RestoreArgumentsBuilder.Build(options);
         var toolNameDisplay = Path.GetFileNameWithoutExtension(toolExecutablePath);
 
-        onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] 啟動還原作業: 工具 '{toolNameDisplay}', 目標資料庫 '{targetDb}'");
-        onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] 來源檔案: {options.SourceFilePath}");
-        onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] 還原模式: {options.Mode}");
+        onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Restore_Log_Start", toolNameDisplay, targetDb)}");
+        onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Restore_Log_SourceFile", options.SourceFilePath)}");
+        onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Restore_Log_Mode", options.Mode)}");
 
         var envVars = new Dictionary<string, string?>();
         if (!string.IsNullOrEmpty(options.Connection.Password))
@@ -160,7 +165,7 @@ public class RestoreService : IRestoreService
 
         if (restoreProc.ExitCode == 0)
         {
-            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [SUCCESS] 還原作業成功完成！總耗時: {stopwatch.Elapsed.TotalSeconds:F2} 秒");
+            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [SUCCESS] {CoreStrings.Format("Restore_Log_Success", CoreStrings.Format("Format_DurationSeconds", stopwatch.Elapsed.TotalSeconds.ToString("F2")))}");
 
             if (_historyRepo != null)
             {
@@ -189,9 +194,9 @@ public class RestoreService : IRestoreService
         {
             var err = !string.IsNullOrWhiteSpace(restoreProc.StandardError)
                 ? restoreProc.StandardError
-                : restoreProc.ErrorMessage ?? "還原程序失敗，工具回傳非零退出碼。";
+                : restoreProc.ErrorMessage ?? CoreStrings.Get("Restore_Error_NonZeroExit");
 
-            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [ERROR] 還原作業失敗 (ExitCode: {restoreProc.ExitCode}): {err}");
+            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [ERROR] {CoreStrings.Format("Restore_Log_Failed", restoreProc.ExitCode, err)}");
 
             if (_historyRepo != null)
             {

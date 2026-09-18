@@ -4,6 +4,8 @@ using Npgsql;
 using PostgresBackup.Core.Interfaces;
 using PostgresBackup.Core.Models;
 
+using PostgresBackup.Core.Resources;
+
 namespace PostgresBackup.Core.Services;
 
 /// <summary>
@@ -43,7 +45,7 @@ public class ToolDetectionService : IToolDetectionService
                     var found = await TryResolveToolsFromDirAsync(candidate, DetectionSource.CustomPath, ct);
                     if (found != null)
                     {
-                        _logger.LogInformation("已自使用者指定路徑找到工具: {Path}", found.PgDumpPath);
+                        _logger.LogInformation("Tools found via the user-specified path: {Path}", found.PgDumpPath);
                         return found;
                     }
                 }
@@ -56,7 +58,7 @@ public class ToolDetectionService : IToolDetectionService
             var found = await TryResolveToolsFromDirAsync(pathDir, DetectionSource.Path, ct);
             if (found != null)
             {
-                _logger.LogInformation("已自 PATH 環境變數找到工具: {Path}", found.PgDumpPath);
+                _logger.LogInformation("Tools found via the PATH environment variable: {Path}", found.PgDumpPath);
                 return found;
             }
         }
@@ -67,7 +69,7 @@ public class ToolDetectionService : IToolDetectionService
             var found = await TryResolveToolsFromDirAsync(commonDir, DetectionSource.CommonDirectory, ct);
             if (found != null)
             {
-                _logger.LogInformation("已自常見安裝路徑找到工具: {Path}", found.PgDumpPath);
+                _logger.LogInformation("Tools found via a common install directory: {Path}", found.PgDumpPath);
                 return found;
             }
         }
@@ -78,14 +80,13 @@ public class ToolDetectionService : IToolDetectionService
             var found = await TryResolveToolsFromDirAsync(regDir, DetectionSource.Registry, ct);
             if (found != null)
             {
-                _logger.LogInformation("已自 Windows Registry 找到工具: {Path}", found.PgDumpPath);
+                _logger.LogInformation("Tools found via the Windows Registry: {Path}", found.PgDumpPath);
                 return found;
             }
         }
 
-        _logger.LogWarning("未在任何預設或指定路徑中偵測到 PostgreSQL 客戶端工具。");
-        return ToolDetectionResult.CreateNotFound(
-            "未在指定目錄、系統 PATH、常見安裝路徑或 Registry 中找到官方客戶端工具 (pg_dump / pg_restore)。");
+        _logger.LogWarning("PostgreSQL client tools were not detected in any default or specified location.");
+        return ToolDetectionResult.CreateNotFound(CoreStrings.Get("ToolDetection_NotFound_Detail"));
     }
 
     public async Task<VersionCheckResult> CheckCompatibilityAsync(
@@ -95,7 +96,7 @@ public class ToolDetectionService : IToolDetectionService
     {
         if (!clientTools.IsReady || clientTools.Version == null)
         {
-            return VersionCheckResult.Failed("客戶端工具尚未就緒，無法進行版本相容性檢查。");
+            return VersionCheckResult.Failed(CoreStrings.Get("ToolDetection_Error_NotReady"));
         }
 
         try
@@ -133,8 +134,8 @@ public class ToolDetectionService : IToolDetectionService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "連線資料庫伺服器檢查版本時發生錯誤");
-            return VersionCheckResult.Failed($"連線資料庫驗證伺服器版本失敗: {ex.Message}");
+            _logger.LogError(ex, "Error while connecting to the database server to check its version.");
+            return VersionCheckResult.Failed(CoreStrings.Format("ToolDetection_Error_ServerCheckFailed", ex.Message));
         }
     }
 
@@ -189,7 +190,7 @@ public class ToolDetectionService : IToolDetectionService
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "執行 {DumpPath} --version 解析版本號失敗", dumpPath);
+            _logger.LogWarning(ex, "Failed to parse the version number from {DumpPath} --version", dumpPath);
         }
 
         return ToolDetectionResult.CreateFound(dumpPath, restorePath, psqlPath, version, source);

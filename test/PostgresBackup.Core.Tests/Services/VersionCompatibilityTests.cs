@@ -28,7 +28,7 @@ public class VersionCompatibilityTests
         Assert.True(result.IsCompatible);
         Assert.Equal(clientVersion, result.ClientVersion);
         Assert.Equal(16, result.ServerMajorVersion);
-        Assert.Contains("相容", result.Message);
+        Assert.Contains("is compatible with server version", result.Message);
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public class VersionCompatibilityTests
         Assert.True(result.IsCompatible);
         Assert.Equal(clientVersion, result.ClientVersion);
         Assert.Equal(16, result.ServerMajorVersion);
-        Assert.Contains("相容", result.Message);
+        Assert.Contains("is compatible with server version", result.Message);
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public class VersionCompatibilityTests
         Assert.False(result.IsCompatible);
         Assert.Equal(clientVersion, result.ClientVersion);
         Assert.Equal(16, result.ServerMajorVersion);
-        Assert.Contains("不相容", result.Message);
-        Assert.Contains("低於", result.Message);
+        Assert.Contains("Version incompatible warning", result.Message);
+        Assert.Contains("is lower than", result.Message);
     }
 }

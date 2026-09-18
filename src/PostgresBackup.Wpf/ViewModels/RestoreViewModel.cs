@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PostgresBackup.Core.Interfaces;
 using PostgresBackup.Core.Models;
+using PostgresBackup.Wpf.Services;
 
 namespace PostgresBackup.Wpf.ViewModels;
 
@@ -21,6 +22,14 @@ public partial class RestoreViewModel : ObservableObject
     {
         _restoreService = restoreService;
         _profileRepo = profileRepo;
+
+        ResetStatusToIdle();
+
+        // 閒置狀態下的狀態文字須隨語系切換重新在地化；作業進行中或已完成的訊息則保留原文。
+        LocalizationService.Instance.PropertyChanged += (_, _) =>
+        {
+            if (_isStatusIdle) ResetStatusToIdle();
+        };
     }
 
     public ObservableCollection<ConnectionProfile> Profiles { get; } = [];
@@ -47,10 +56,19 @@ public partial class RestoreViewModel : ObservableObject
     private bool _isRestoring;
 
     [ObservableProperty]
-    private string _statusBadgeText = "就緒";
+    private string _statusBadgeText = string.Empty;
 
     [ObservableProperty]
-    private string _statusMessage = "準備就緒";
+    private string _statusMessage = string.Empty;
+
+    private bool _isStatusIdle = true;
+
+    private void ResetStatusToIdle()
+    {
+        _isStatusIdle = true;
+        StatusBadgeText = LocalizationService.S("Status_Idle");
+        StatusMessage = LocalizationService.S("Status_Idle_Message");
+    }
 
     [ObservableProperty]
     private string _terminalOutput = string.Empty;
@@ -104,8 +122,8 @@ public partial class RestoreViewModel : ObservableObject
     {
         var dialog = new OpenFileDialog
         {
-            Title = "選取備份檔案",
-            Filter = "PostgreSQL 備份檔案 (*.dump;*.sql)|*.dump;*.sql|自訂二進位 (*.dump)|*.dump|純文字腳本 (*.sql)|*.sql|所有檔案 (*.*)|*.*"
+            Title = LocalizationService.S("Restore_Dialog_SelectSourceFile"),
+            Filter = LocalizationService.S("Restore_Dialog_FileFilter")
         };
 
         if (dialog.ShowDialog() == true)
@@ -121,13 +139,21 @@ public partial class RestoreViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(SourceFilePath) || !File.Exists(SourceFilePath))
         {
-            MessageBox.Show("請先指定有效且存在的備份來源檔案！", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(
+                LocalizationService.S("Restore_Msg_NoSourceFile"),
+                LocalizationService.S("Common_Warning"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
             return;
         }
 
         if (SelectedProfile == null)
         {
-            MessageBox.Show("請先選取目標連線設定檔！", "警告", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(
+                LocalizationService.S("Restore_Msg_NoProfile"),
+                LocalizationService.S("Common_Warning"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
             return;
         }
 
@@ -135,14 +161,19 @@ public partial class RestoreViewModel : ObservableObject
 
         if (!IsConfirmed)
         {
-            MessageBox.Show("請勾選「高危險操作確認」方塊以確認您已了解資料覆寫風險！", "安全防護提醒", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(
+                LocalizationService.S("Restore_Msg_NotConfirmed"),
+                LocalizationService.S("Restore_Msg_SafetyGuardTitle"),
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
             return;
         }
 
         IsRestoring = true;
-        StatusBadgeText = "還原中";
-        StatusMessage = "正在執行安全還原作業...";
-        AppendLog($"[{DateTime.Now:HH:mm:ss}] === 啟動安全還原程序 ===");
+        _isStatusIdle = false;
+        StatusBadgeText = LocalizationService.S("Status_Restoring");
+        StatusMessage = LocalizationService.S("Restore_Status_Running");
+        AppendLog($"[{DateTime.Now:HH:mm:ss}] {LocalizationService.S("Restore_Log_Start")}");
 
         try
         {
@@ -168,23 +199,24 @@ public partial class RestoreViewModel : ObservableObject
 
             if (result.IsSuccess)
             {
-                StatusBadgeText = "完成";
-                StatusMessage = "資料庫還原順利完成！";
+                StatusBadgeText = LocalizationService.S("Status_Completed");
+                StatusMessage = LocalizationService.S("Restore_Status_Success");
                 if (result.SnapshotCreated)
                 {
-                    StatusMessage += $"（已儲存安全快照: {Path.GetFileName(result.SnapshotFilePath)}）";
+                    StatusMessage += LocalizationService.S(
+                        "Restore_Status_SnapshotSaved", Path.GetFileName(result.SnapshotFilePath));
                 }
             }
             else
             {
-                StatusBadgeText = "失敗";
-                StatusMessage = $"還原作業中止或失敗：{result.ErrorMessage}";
+                StatusBadgeText = LocalizationService.S("Status_Failed");
+                StatusMessage = LocalizationService.S("Restore_Status_Failed", result.ErrorMessage);
             }
         }
         catch (Exception ex)
         {
-            StatusBadgeText = "錯誤";
-            StatusMessage = $"發生未預期錯誤: {ex.Message}";
+            StatusBadgeText = LocalizationService.S("Status_Error");
+            StatusMessage = LocalizationService.S("Common_UnexpectedError", ex.Message);
             AppendLog($"[ERROR] {ex.Message}");
         }
         finally

@@ -103,7 +103,7 @@ public class RestoreServiceTests
 
             // 驗證快照失敗時還原作業被終止
             Assert.False(result.IsSuccess);
-            Assert.Contains("強制終止", result.ErrorMessage);
+            Assert.Contains("aborted to protect", result.ErrorMessage);
             Assert.Equal(1, runner.CallCount); // 僅呼叫了 pg_dump，絕無呼叫 pg_restore
             Assert.DoesNotContain(runner.ExecutablesCalled, e => e.Contains("pg_restore"));
 

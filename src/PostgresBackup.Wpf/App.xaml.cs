@@ -16,7 +16,8 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        LocalizationService.Instance.InitFromSystem();
+        // --lang <code> 可覆寫系統語系偵測結果（供自動化截圖與整合測試使用）
+        LocalizationService.Instance.InitFromSystem(GetLanguageOverride(e.Args));
 
         var services = new ServiceCollection();
 
@@ -47,10 +48,20 @@ public partial class App : Application
         mainWindow.Show();
 
 
-        // 支援自動化截圖旗標 --capture <outputDir> [--custom-tools <toolsDir>]
+        // 支援自動化截圖旗標 --capture <outputDir> [--custom-tools <toolsDir>] [--lang <code>]
         if (UiCaptureService.IsCaptureMode(e.Args))
         {
             _ = UiCaptureService.RunCaptureAsync(mainWindow, Services, e.Args);
         }
+    }
+
+    /// <summary>自命令列引數取出 --lang &lt;code&gt; 指定之語系，未指定時回傳 null 以沿用系統偵測。</summary>
+    private static string? GetLanguageOverride(string[] args)
+    {
+        var idx = Array.IndexOf(args, "--lang");
+        if (idx < 0 || idx + 1 >= args.Length) return null;
+
+        var code = args[idx + 1];
+        return LocalizationService.SupportedLanguages.Any(l => l.Code == code) ? code : null;
     }
 }

@@ -48,7 +48,7 @@
                                            Foreground="{DynamicResource PrimaryTextBrush}" Margin="0,0,0,6"/>
                                 <TextBox Text="{Binding SourceFilePath, UpdateSourceTrigger=PropertyChanged}"
                                          Height="32" VerticalContentAlignment="Center"
-                                         hc:InfoElement.Placeholder="請選取 .dump 或 .sql 備份檔案"/>
+                                         hc:InfoElement.Placeholder="{l:Loc Restore_SourceFile_Placeholder}"/>
                             </StackPanel>
                             <Button Grid.Column="2"
                                     Content="{l:Loc Settings_Browse}"

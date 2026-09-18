@@ -76,4 +76,109 @@
   <data name="Version_Incompatible" xml:space="preserve">
     <value>版本不相容警告：客戶端工具主版本 ({0}) 低於資料庫伺服器主版本 ({1})。PostgreSQL 官方要求 pg_dump 版本必須大於或等於伺服器版本以確保備份完整性。</value>
   </data>
+  <data name="Format_DurationSeconds" xml:space="preserve">
+    <value>{0} 秒</value>
+  </data>
+  <data name="OperationType_Backup" xml:space="preserve">
+    <value>備份作業</value>
+  </data>
+  <data name="OperationType_Restore" xml:space="preserve">
+    <value>還原作業</value>
+  </data>
+  <data name="OperationType_PreRestoreSnapshot" xml:space="preserve">
+    <value>還原前安全快照</value>
+  </data>
+  <data name="Profile_DefaultName" xml:space="preserve">
+    <value>預設連線</value>
+  </data>
+  <data name="Error_VersionParseFailed" xml:space="preserve">
+    <value>無法從「{0}」中解析 PostgreSQL 版本號。</value>
+  </data>
+  <data name="Backup_Error_PgDumpNotFound" xml:space="preserve">
+    <value>未偵測到 PostgreSQL 客戶端工具 (pg_dump)！請先於設定頁面確認安裝或指定工具目錄。</value>
+  </data>
+  <data name="Backup_Log_Start" xml:space="preserve">
+    <value>啟動備份作業: 資料庫 '{0}'</value>
+  </data>
+  <data name="Backup_Log_Options" xml:space="preserve">
+    <value>格式: {0}, 模式: {1}, 範圍: {2}</value>
+  </data>
+  <data name="Backup_Log_OutputPath" xml:space="preserve">
+    <value>輸出路徑: {0}</value>
+  </data>
+  <data name="Backup_Log_Tool" xml:space="preserve">
+    <value>執行工具: {0}</value>
+  </data>
+  <data name="Backup_Log_Success" xml:space="preserve">
+    <value>備份作業順利完成！</value>
+  </data>
+  <data name="Backup_Log_FileInfo" xml:space="preserve">
+    <value>產出檔案大小: {0}, 耗時: {1}</value>
+  </data>
+  <data name="Backup_Log_HistoryWriteFailed" xml:space="preserve">
+    <value>寫入歷史倉儲失敗: {0}</value>
+  </data>
+  <data name="Backup_Error_NonZeroExit" xml:space="preserve">
+    <value>備份作業失敗，pg_dump 回傳非零退出碼。</value>
+  </data>
+  <data name="Backup_Log_Failed" xml:space="preserve">
+    <value>備份作業失敗 (ExitCode: {0})</value>
+  </data>
+  <data name="Backup_Log_ErrorDetail" xml:space="preserve">
+    <value>錯誤訊息: {0}</value>
+  </data>
+  <data name="Process_Error_CannotStart" xml:space="preserve">
+    <value>無法啟動處理序: {0}</value>
+  </data>
+  <data name="Process_Error_Exception" xml:space="preserve">
+    <value>執行處理序時發生例外: {0}</value>
+  </data>
+  <data name="Restore_Error_SourceMissing" xml:space="preserve">
+    <value>來源備份檔案不存在: '{0}'</value>
+  </data>
+  <data name="Restore_Error_ToolsNotFound" xml:space="preserve">
+    <value>未偵測到 PostgreSQL 官方客戶端工具！請先於設定頁面確認安裝。</value>
+  </data>
+  <data name="Restore_Error_ToolMissing" xml:space="preserve">
+    <value>未找到執行所需之官方工具: {0}</value>
+  </data>
+  <data name="Restore_Log_SnapshotStart" xml:space="preserve">
+    <value>正在對目標資料庫 '{0}' 執行還原前安全快照 (Pre-Restore Snapshot)...</value>
+  </data>
+  <data name="Restore_Error_SnapshotServiceMissing" xml:space="preserve">
+    <value>安全快照失敗：未注入備份作業服務 (IBackupService)，為保護既有資料庫，已強制終止還原作業。</value>
+  </data>
+  <data name="Restore_Error_SnapshotFailed" xml:space="preserve">
+    <value>安全快照建立失敗 (ExitCode: {0}): {1}。為保護既有資料庫免受破壞，系統已強制終止還原作業！</value>
+  </data>
+  <data name="Restore_Error_SnapshotFileMissing" xml:space="preserve">
+    <value>無法產生快照檔案</value>
+  </data>
+  <data name="Restore_Log_SnapshotSuccess" xml:space="preserve">
+    <value>安全快照已建立完畢（大小: {0} 位元組）</value>
+  </data>
+  <data name="Restore_Log_Start" xml:space="preserve">
+    <value>啟動還原作業: 工具 '{0}', 目標資料庫 '{1}'</value>
+  </data>
+  <data name="Restore_Log_SourceFile" xml:space="preserve">
+    <value>來源檔案: {0}</value>
+  </data>
+  <data name="Restore_Log_Mode" xml:space="preserve">
+    <value>還原模式: {0}</value>
+  </data>
+  <data name="Restore_Log_Success" xml:space="preserve">
+    <value>還原作業成功完成！總耗時: {0}</value>
+  </data>
+  <data name="Restore_Error_NonZeroExit" xml:space="preserve">
+    <value>還原程序失敗，工具回傳非零退出碼。</value>
+  </data>
+  <data name="Restore_Log_Failed" xml:space="preserve">
+    <value>還原作業失敗 (ExitCode: {0}): {1}</value>
+  </data>
+  <data name="ToolDetection_Error_NotReady" xml:space="preserve">
+    <value>客戶端工具尚未就緒，無法進行版本相容性檢查。</value>
+  </data>
+  <data name="ToolDetection_Error_ServerCheckFailed" xml:space="preserve">
+    <value>連線資料庫驗證伺服器版本失敗: {0}</value>
+  </data>
 </root>

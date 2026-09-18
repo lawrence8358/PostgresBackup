@@ -151,6 +151,6 @@ public class BackupServiceTests
         var result = await service.BackupAsync(options);
 
         Assert.False(result.IsSuccess);
-        Assert.Contains("未偵測到", result.ErrorMessage);
+        Assert.Contains("were not detected", result.ErrorMessage);
     }
 }

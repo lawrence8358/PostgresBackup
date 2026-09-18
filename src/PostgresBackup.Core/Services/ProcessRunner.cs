@@ -3,6 +3,8 @@ using System.Text;
 using PostgresBackup.Core.Interfaces;
 using PostgresBackup.Core.Models;
 
+using PostgresBackup.Core.Resources;
+
 namespace PostgresBackup.Core.Services;
 
 /// <summary>
@@ -78,7 +80,7 @@ public class ProcessRunner : IProcessRunner
         {
             if (!process.Start())
             {
-                return new ProcessResult(-1, string.Empty, $"無法啟動處理序: {executable}");
+                return new ProcessResult(-1, string.Empty, CoreStrings.Format("Process_Error_CannotStart", executable));
             }
 
             process.BeginOutputReadLine();
@@ -108,7 +110,7 @@ public class ProcessRunner : IProcessRunner
         }
         catch (Exception ex)
         {
-            return new ProcessResult(-1, string.Empty, $"執行處理序時發生例外: {ex.Message}");
+            return new ProcessResult(-1, string.Empty, CoreStrings.Format("Process_Error_Exception", ex.Message));
         }
     }
 

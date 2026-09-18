@@ -1,3 +1,5 @@
+using PostgresBackup.Core.Resources;
+
 namespace PostgresBackup.Core.Models;
 
 /// <summary>
@@ -6,7 +8,7 @@ namespace PostgresBackup.Core.Models;
 public class ConnectionProfile
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
-    public string Name { get; set; } = "預設連線";
+    public string Name { get; set; } = CoreStrings.Get("Profile_DefaultName");
     public string Host { get; set; } = "localhost";
     public int Port { get; set; } = 5432;
     public string Database { get; set; } = "postgres";

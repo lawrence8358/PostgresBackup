@@ -59,7 +59,7 @@
                                     <TextBlock Text="{Binding StatusMessage}"
                                                FontWeight="SemiBold" FontSize="12" TextWrapping="Wrap"
                                                Foreground="{DynamicResource PrimaryTextBrush}"/>
-                                    <TextBlock Text="{Binding SourceDisplay, StringFormat='來源: {0}'}"
+                                    <TextBlock Text="{Binding SourceDisplay}"
                                                FontSize="11" Margin="0,1,0,0" TextTrimming="CharacterEllipsis"
                                                Foreground="{DynamicResource SecondaryTextBrush}"/>
                                 </StackPanel>
@@ -81,11 +81,11 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0"
-                                       Text="pg_dump • pg_restore • psql 均已就緒"
+                                       Text="{l:Loc Settings_ToolStatus_AllReady}"
                                        FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}"
                                        VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="1"
-                                       Text="{Binding ToolResult.Version, StringFormat='版本: {0}'}"
+                                       Text="{Binding ToolVersionDisplay}"
                                        FontSize="11" FontWeight="Medium" Foreground="{DynamicResource PrimaryBrush}"
                                        VerticalAlignment="Center"/>
                         </Grid>
