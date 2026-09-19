@@ -49,3 +49,6 @@ test-reports/
 
 ## [Build Output]
 dist/
+
+## [Integration verification — 依 spec 規定不簽入版控]
+verify-scheduled-backup.ps1
