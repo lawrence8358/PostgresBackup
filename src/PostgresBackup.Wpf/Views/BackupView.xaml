@@ -6,14 +6,24 @@
              xmlns:hc="https://handyorg.github.io/handycontrol"
              xmlns:converters="clr-namespace:PostgresBackup.Wpf.Converters"
              xmlns:l="clr-namespace:PostgresBackup.Wpf.Extensions"
+             FontSize="13"
              mc:Ignorable="d">
     <UserControl.Resources>
         <converters:InvertBoolConverter x:Key="InvertBoolConverter"/>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
     </UserControl.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Margin="24,14,24,16" MaxWidth="920">
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  HorizontalContentAlignment="Stretch">
+        <Grid MinHeight="{Binding ActualHeight, RelativeSource={RelativeSource AncestorType=UserControl}}">
+            <Grid Margin="24,14,24,16">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*" MinHeight="180"/>
+                </Grid.RowDefinitions>
 
             <!-- 頁面標題 -->
             <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
@@ -23,7 +33,7 @@
             </StackPanel>
 
             <!-- 作業狀態：保持在標題下方，長時間作業時不必捲到頁面底部才能確認狀態。 -->
-            <Border Background="White" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+            <Border Grid.Row="1" Background="White" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
                     CornerRadius="6" Padding="12,10" Margin="0,0,0,14">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -36,18 +46,52 @@
                         <TextBlock Text="{Binding StatusBadgeText}" Foreground="White"
                                    FontSize="11" FontWeight="SemiBold"/>
                     </Border>
-                    <StackPanel Grid.Column="1" Margin="12,0,0,0">
-                        <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource PrimaryTextBrush}"
-                                   FontSize="12" TextWrapping="Wrap"/>
-                        <ProgressBar Height="4" Margin="0,8,0,0" IsIndeterminate="True"
-                                     Foreground="#1976D2"
-                                     Visibility="{Binding IsBackingUp, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                    </StackPanel>
+                    <Grid Grid.Column="1" Margin="12,0,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0">
+                            <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource PrimaryTextBrush}"
+                                       FontSize="12" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                            <ProgressBar Height="4" Margin="0,8,0,0" IsIndeterminate="True"
+                                         Foreground="#1976D2"
+                                         Visibility="{Binding IsBackingUp, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                        </StackPanel>
+
+                        <Border Grid.Row="1" Margin="0,10,0,0" Padding="10"
+                                Background="#FFF7F7" BorderBrush="#F0C7C7" BorderThickness="1" CornerRadius="4"
+                                Visibility="{Binding HasErrorDetails, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{l:Loc Common_ErrorDetails}" FontSize="11" FontWeight="SemiBold"
+                                               Foreground="#8B1E1E" VerticalAlignment="Center"/>
+                                    <Button Grid.Column="1" Content="{l:Loc Common_CopyError}"
+                                            Style="{StaticResource ButtonDefault}" Command="{Binding CopyErrorDetailsCommand}"
+                                            Padding="10,2" Height="26" FontSize="11"/>
+                                </Grid>
+                                <TextBox Grid.Row="1" Margin="0,8,0,0" Height="150" Padding="8"
+                                         Text="{Binding ErrorDetails, Mode=OneWay}" IsReadOnly="True" AcceptsReturn="True"
+                                         TextWrapping="NoWrap" VerticalScrollBarVisibility="Auto"
+                                         HorizontalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="11"
+                                         Background="White" BorderBrush="#E0E0E0" VerticalContentAlignment="Top"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
                 </Grid>
             </Border>
 
             <!-- ── 卡片 1: 備份參數設定 ── -->
-            <hc:Card Margin="0,0,0,14" Padding="0" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+            <hc:Card Grid.Row="2" Margin="0,0,0,14" Padding="0" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
                      IsEnabled="{Binding IsBackingUp, Converter={StaticResource InvertBoolConverter}}">
                 <StackPanel>
                     <Border Background="{DynamicResource PrimaryBrush}" CornerRadius="4,4,0,0" Padding="16,10">
@@ -200,8 +244,13 @@
             </hc:Card>
 
             <!-- ── 卡片 2: 即時終端輸出與日誌 ── -->
-            <hc:Card Margin="0,0,0,16" Padding="0" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
-                <StackPanel>
+            <hc:Card Grid.Row="3" Padding="0" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                     MaxHeight="420" VerticalAlignment="Top">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
                     <Border Background="{DynamicResource PrimaryBrush}" CornerRadius="4,4,0,0" Padding="18,12">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -228,16 +277,16 @@
                         </Grid>
                     </Border>
 
-                    <Border Background="#181818" CornerRadius="0,0,4,4" Padding="12" MinHeight="180">
+                    <Border Grid.Row="1" Background="#181818" CornerRadius="0,0,4,4" Padding="12" MinHeight="180">
                         <TextBox x:Name="TerminalBox"
                                  Style="{StaticResource TerminalTextBoxStyle}"
-                                 Height="220"
                                  Text="{Binding TerminalOutput, Mode=OneWay}"
                                  TextChanged="TerminalBox_TextChanged"/>
                     </Border>
-                </StackPanel>
+                </Grid>
             </hc:Card>
 
-        </StackPanel>
+            </Grid>
+        </Grid>
     </ScrollViewer>
 </UserControl>

@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Text;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -16,18 +15,20 @@ public partial class BackupViewModel : ObservableObject
     private readonly IBackupService _backupService;
     private readonly IConnectionProfileRepository _profileRepo;
     private readonly SettingsViewModel? _settingsViewModel;
-    private readonly LogViewModel? _logViewModel;
+    private readonly IClipboardService _clipboardService;
+    private readonly BufferedTerminalOutput _terminalOutputBuffer;
 
     public BackupViewModel(
         IBackupService backupService,
         IConnectionProfileRepository profileRepo,
         SettingsViewModel? settingsViewModel = null,
-        LogViewModel? logViewModel = null)
+        IClipboardService? clipboardService = null)
     {
         _backupService = backupService;
         _profileRepo = profileRepo;
         _settingsViewModel = settingsViewModel;
-        _logViewModel = logViewModel;
+        _clipboardService = clipboardService ?? new WpfClipboardService();
+        _terminalOutputBuffer = new BufferedTerminalOutput(output => TerminalOutput = output);
 
         var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         _outputDirectory = Path.Combine(docs, "PostgresBackups");
@@ -88,12 +89,18 @@ public partial class BackupViewModel : ObservableObject
         StatusKind = OperationStatusKind.Idle;
         StatusBadgeText = LocalizationService.S("Status_Idle");
         StatusMessage = LocalizationService.S("Status_Idle_Message");
+        ErrorDetails = string.Empty;
     }
 
     [ObservableProperty]
     private string _terminalOutput = string.Empty;
 
-    private readonly StringBuilder _terminalBuilder = new();
+    [ObservableProperty]
+    private string _errorDetails = string.Empty;
+
+    public bool HasErrorDetails => !string.IsNullOrWhiteSpace(ErrorDetails);
+
+    partial void OnErrorDetailsChanged(string value) => OnPropertyChanged(nameof(HasErrorDetails));
 
     public async Task InitializeAsync()
     {
@@ -185,6 +192,7 @@ public partial class BackupViewModel : ObservableObject
         StatusKind = OperationStatusKind.Running;
         StatusBadgeText = LocalizationService.S("Status_Running");
         StatusMessage = LocalizationService.S("Backup_Status_Running");
+        ErrorDetails = string.Empty;
         AppendLog($"[{DateTime.Now:HH:mm:ss}] {LocalizationService.S("Backup_Log_Start")}");
 
         try
@@ -215,26 +223,31 @@ public partial class BackupViewModel : ObservableObject
             var result = await _backupService.BackupAsync(
                 options,
                 onLogLine: AppendLog);
+            await _terminalOutputBuffer.FlushAsync();
 
             if (result.IsSuccess)
             {
                 StatusKind = OperationStatusKind.Completed;
                 StatusBadgeText = LocalizationService.S("Status_Completed");
                 StatusMessage = LocalizationService.S("Backup_Status_Success", Path.GetFileName(result.OutputFilePath));
+                ErrorDetails = string.Empty;
             }
             else
             {
                 StatusKind = OperationStatusKind.Failed;
                 StatusBadgeText = LocalizationService.S("Status_Failed");
-                StatusMessage = LocalizationService.S("Backup_Status_Failed", result.ErrorMessage);
+                StatusMessage = LocalizationService.S("Backup_Status_Failed_Summary");
+                ErrorDetails = result.ErrorMessage ?? string.Empty;
             }
         }
         catch (Exception ex)
         {
+            AppendLog($"[ERROR] {ex.Message}");
+            await _terminalOutputBuffer.FlushAsync();
             StatusKind = OperationStatusKind.Error;
             StatusBadgeText = LocalizationService.S("Status_Error");
-            StatusMessage = LocalizationService.S("Common_UnexpectedError", ex.Message);
-            AppendLog($"[ERROR] {ex.Message}");
+            StatusMessage = LocalizationService.S("Common_UnexpectedError_Summary");
+            ErrorDetails = ex.Message;
         }
         finally
         {
@@ -245,37 +258,31 @@ public partial class BackupViewModel : ObservableObject
 
     private void AppendLog(string line)
     {
-        void AppendOnUiThread()
-        {
-            _terminalBuilder.AppendLine(line);
-            TerminalOutput = _terminalBuilder.ToString();
-            _logViewModel?.AppendLog(line, includeTimestamp: false);
-        }
-
-        var dispatcher = Application.Current?.Dispatcher;
-        if (dispatcher is null || dispatcher.CheckAccess())
-        {
-            AppendOnUiThread();
-        }
-        else
-        {
-            dispatcher.Invoke(AppendOnUiThread);
-        }
+        _terminalOutputBuffer.Append(line);
     }
 
     [RelayCommand]
     public void ClearLog()
     {
-        _terminalBuilder.Clear();
-        TerminalOutput = string.Empty;
+        _terminalOutputBuffer.Clear();
     }
 
     [RelayCommand]
     public void CopyLog()
     {
-        if (!string.IsNullOrEmpty(TerminalOutput))
+        var output = _terminalOutputBuffer.Content;
+        if (!string.IsNullOrEmpty(output))
         {
-            Clipboard.SetText(TerminalOutput);
+            _clipboardService.SetText(output);
+        }
+    }
+
+    [RelayCommand]
+    public void CopyErrorDetails()
+    {
+        if (HasErrorDetails)
+        {
+            _clipboardService.SetText(ErrorDetails);
         }
     }
 }

@@ -166,6 +166,42 @@
   <data name="Restore_Log_Mode" xml:space="preserve">
     <value>Restore mode: {0}</value>
   </data>
+  <data name="Restore_Log_PlanStart" xml:space="preserve">
+    <value>Inspecting the archive and target database for missing objects...</value>
+  </data>
+  <data name="Restore_Log_DataPlanStart" xml:space="preserve">
+    <value>Inspecting the archive and target database for a data-only restore...</value>
+  </data>
+  <data name="Restore_Log_PlanSummary" xml:space="preserve">
+    <value>Restore plan ready: {0} archive entries selected, {1} existing entries skipped, {2} metadata entries skipped.</value>
+  </data>
+  <data name="Restore_Error_ArchiveListFailed" xml:space="preserve">
+    <value>Could not read the backup archive table of contents: {0}</value>
+  </data>
+  <data name="Restore_Error_UnsupportedArchiveEntries" xml:space="preserve">
+    <value>Normal restore was stopped before making changes because the archive contains unsupported object types: {0}. Use Clean and Recreate, or update the application before restoring this archive.</value>
+  </data>
+  <data name="Restore_Error_PlanFailed" xml:space="preserve">
+    <value>Could not compare the backup archive with the target database: {0}</value>
+  </data>
+  <data name="Restore_Log_DataPlanSummary" xml:space="preserve">
+    <value>Data restore plan ready: {0} target tables and {1} data entries.</value>
+  </data>
+  <data name="Restore_Error_UnsupportedDataEntries" xml:space="preserve">
+    <value>Data-only restore was stopped before making changes because the archive contains unsupported data entry types: {0}.</value>
+  </data>
+  <data name="Restore_Error_DataTargetsMissing" xml:space="preserve">
+    <value>Data-only restore requires the target schema to exist. These target objects are missing: {0}.</value>
+  </data>
+  <data name="Restore_Error_DataDependencyCycle" xml:space="preserve">
+    <value>Data-only restore was stopped before clearing data because these tables cannot be safely ordered due to circular foreign-key dependencies: {0}. Use Clean and Recreate for this archive.</value>
+  </data>
+  <data name="Restore_Log_DataClearStart" xml:space="preserve">
+    <value>Clearing existing data from {0} archive tables before data restore...</value>
+  </data>
+  <data name="Restore_Error_DataClearFailed" xml:space="preserve">
+    <value>Could not clear existing target data; pg_restore was not started: {0}</value>
+  </data>
   <data name="Restore_Log_Success" xml:space="preserve">
     <value>Restore completed successfully. Total duration: {0}</value>
   </data>

@@ -76,9 +76,6 @@
   <data name="Nav_History" xml:space="preserve">
     <value>歷史紀錄</value>
   </data>
-  <data name="Nav_Log" xml:space="preserve">
-    <value>即時日誌</value>
-  </data>
   <data name="Settings_Title" xml:space="preserve">
     <value>設定與環境檢查</value>
   </data>
@@ -281,7 +278,7 @@
     <value>一般還原 (僅建立遺漏物件)</value>
   </data>
   <data name="Restore_Mode_DataOnly" xml:space="preserve">
-    <value>僅寫入資料 (--data-only)</value>
+    <value>取代既有資料（先清空備份涵蓋的資料表）</value>
   </data>
   <data name="Restore_Snapshot_Label" xml:space="preserve">
     <value>還原前強制建立安全快照 (Pre-Restore Snapshot)</value>
@@ -364,9 +361,6 @@
   <data name="History_Refresh" xml:space="preserve">
     <value>重新整理</value>
   </data>
-  <data name="Log_Title" xml:space="preserve">
-    <value>全域系統日誌</value>
-  </data>
   <data name="Settings_PsqlPath" xml:space="preserve">
     <value>psql 路徑</value>
   </data>
@@ -387,9 +381,6 @@
   </data>
   <data name="Backup_Tables_Placeholder" xml:space="preserve">
     <value>例如：users, orders, payments</value>
-  </data>
-  <data name="Log_StreamTitle" xml:space="preserve">
-    <value>全域即時執行串流</value>
   </data>
   <data name="Settings_Guide_LicenseNotice" xml:space="preserve">
     <value>官方 PostgreSQL 客戶端工具 (pg_dump / pg_restore / psql) 遵循開源 PostgreSQL License (BSD 相容)，100% 允許免費商業使用及分發，無額外商用授權費。</value>
@@ -438,12 +429,6 @@
   </data>
   <data name="Status_Error" xml:space="preserve">
     <value>錯誤</value>
-  </data>
-  <data name="Log_Header" xml:space="preserve">
-    <value>=== PostgresBackup 系統日誌記錄 ===</value>
-  </data>
-  <data name="Log_Header_Cleared" xml:space="preserve">
-    <value>=== PostgresBackup 系統日誌記錄 (已清空) ===</value>
   </data>
   <data name="Backup_Dialog_SelectOutputDir" xml:space="preserve">
     <value>選取備份檔案存放目錄</value>
@@ -582,5 +567,47 @@
   </data>
   <data name="Profile_Store_PasswordLoadFailed" xml:space="preserve">
     <value>無法讀取這筆連線設定的密碼：{0}</value>
+  </data>
+  <data name="Settings_ToolPresentation_NotChecked" xml:space="preserve">
+    <value>尚未檢查</value>
+  </data>
+  <data name="Settings_ToolPresentation_Detecting" xml:space="preserve">
+    <value>檢查中</value>
+  </data>
+  <data name="Settings_ToolPresentation_Ready" xml:space="preserve">
+    <value>已就緒</value>
+  </data>
+  <data name="Settings_ToolPresentation_Incompatible" xml:space="preserve">
+    <value>版本不相容</value>
+  </data>
+  <data name="Settings_ToolPresentation_NotFound" xml:space="preserve">
+    <value>找不到工具</value>
+  </data>
+  <data name="Settings_ToolStatus_NotCheckedMessage" xml:space="preserve">
+    <value>尚未檢查 PostgreSQL 客戶端工具。</value>
+  </data>
+  <data name="Settings_ToolStatus_DetectingMessage" xml:space="preserve">
+    <value>正在檢查 PostgreSQL 客戶端工具…</value>
+  </data>
+  <data name="Settings_Guide_EdbPortableBinariesDownload" xml:space="preserve">
+    <value>EDB 免安裝 Windows 壓縮檔</value>
+  </data>
+  <data name="App_Version_Format" xml:space="preserve">
+    <value>版本 v{0}</value>
+  </data>
+  <data name="Common_ErrorDetails" xml:space="preserve">
+    <value>錯誤詳情</value>
+  </data>
+  <data name="Common_CopyError" xml:space="preserve">
+    <value>複製錯誤</value>
+  </data>
+  <data name="Backup_Status_Failed_Summary" xml:space="preserve">
+    <value>備份失敗，請查看下方錯誤詳情。</value>
+  </data>
+  <data name="Restore_Status_Failed_Summary" xml:space="preserve">
+    <value>還原失敗，請查看下方錯誤詳情。</value>
+  </data>
+  <data name="Common_UnexpectedError_Summary" xml:space="preserve">
+    <value>發生未預期錯誤，請查看下方錯誤詳情。</value>
   </data>
 </root>

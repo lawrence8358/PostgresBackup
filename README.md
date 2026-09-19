@@ -69,9 +69,6 @@ PostgresBackup takes the other path:
 ### History — immutable audit trail
 ![History](docs/screenshots/en/demo_wpf_history.png)
 
-### Live log
-![Log](docs/screenshots/en/demo_wpf_log.png)
-
 ## Getting Started
 
 ### Prerequisites
@@ -249,13 +246,12 @@ The CLI exits `0` on success and non-zero on failure, so it composes normally wi
 
 ## WPF Desktop Application
 
-Five pages, in the order you would use them:
+Four pages, in the order you would use them:
 
 1. **Settings** — detect or point at the client tools, then create connection profiles. Passwords go to Windows Credential Manager; the profile file itself holds no secrets. "Test connection" also reports client/server version compatibility. These GUI profiles are for this application only — scheduled tasks and the CLI use their own profiles, created with `pgbackup profile set` (see [Scheduled Backups](#scheduled-backups) and [Security](#security)).
-2. **Backup** — pick a profile, choose format / mode / scope, and watch the output file name preview update live. Execution streams straight to the log.
+2. **Backup** — pick a profile, choose format / mode / scope, and watch the output file name preview update live. Execution streams in the backup page terminal.
 3. **Restore** — pick a backup file and a target. The pre-restore snapshot is checked by default. The execute button stays locked until you retype the target database name and acknowledge the overwrite risk.
 4. **History** — every backup, restore and snapshot, filterable by type or database name, with "reveal in Explorer" and one-click "restore this file".
-5. **Log** — the live `pg_dump` / `pg_restore` stream, including per-table progress, with copy and clear.
 
 The language switcher (English / 繁體中文) at the bottom of the sidebar applies immediately, with no restart.
 

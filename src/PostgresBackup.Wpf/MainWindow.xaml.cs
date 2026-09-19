@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.ComponentModel;
 using PostgresBackup.Wpf.Services;
 using PostgresBackup.Wpf.ViewModels;
 
@@ -18,10 +19,10 @@ public partial class MainWindow
         // NavSettings 的 Checked 事件在 InitializeComponent 解析左側邊欄時即觸發，
         // 此時右側 MainContent 尚未建立，SwitchToPage 會被 null 防護提早返回，
         // 導致啟動後內容區域空白。故於樹狀結構建立完成後補呼叫一次初始導覽。
-        SwitchToPage("Settings");
+        ShowPage(_vm.Navigation.CurrentPage);
 
         Loaded += MainWindow_Loaded;
-        _vm.NavigationRequested += OnNavigationRequested;
+        _vm.Navigation.PropertyChanged += OnNavigationChanged;
     }
 
     private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -51,84 +52,104 @@ public partial class MainWindow
         _ = _vm.Settings.InitializeAsync();
     }
 
-    private void OnNavigationRequested(string pageName)
+    private void OnNavigationChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName != nameof(MainNavigation.CurrentPage)) return;
+
         Dispatcher.Invoke(() =>
         {
-            switch (pageName)
-            {
-                case "Settings":
-                    NavSettings.IsChecked = true;
-                    break;
-                case "Backup":
-                    NavBackup.IsChecked = true;
-                    break;
-                case "Restore":
-                    NavRestore.IsChecked = true;
-                    break;
-                case "History":
-                    NavHistory.IsChecked = true;
-                    break;
-                case "Log":
-                    NavLog.IsChecked = true;
-                    break;
-            }
-            SwitchToPage(pageName);
+            SelectNavigationItem(_vm.Navigation.CurrentPage);
+            ShowPage(_vm.Navigation.CurrentPage);
         });
     }
 
     private void Nav_Checked(object sender, RoutedEventArgs e)
     {
-        if (sender is RadioButton rb && rb.Tag is string pageName)
+        if (sender is RadioButton rb &&
+            rb.Tag is string pageName &&
+            Enum.TryParse<MainPage>(pageName, out var destination))
         {
-            SwitchToPage(pageName);
+            _vm.Navigation.NavigateTo(destination);
         }
     }
 
     public void SwitchToPage(string pageName)
     {
+        if (Enum.TryParse<MainPage>(pageName, out var destination))
+        {
+            if (_vm.Navigation.CurrentPage == destination)
+            {
+                SelectNavigationItem(destination);
+                ShowPage(destination);
+            }
+            else
+            {
+                _vm.Navigation.NavigateTo(destination);
+            }
+            return;
+        }
+
+        ShowUnknownPage(pageName);
+    }
+
+    private void SelectNavigationItem(MainPage destination)
+    {
+        switch (destination)
+        {
+            case MainPage.Settings:
+                NavSettings.IsChecked = true;
+                break;
+            case MainPage.Backup:
+                NavBackup.IsChecked = true;
+                break;
+            case MainPage.Restore:
+                NavRestore.IsChecked = true;
+                break;
+            case MainPage.History:
+                NavHistory.IsChecked = true;
+                break;
+        }
+    }
+
+    private void ShowPage(MainPage destination)
+    {
         if (MainContent == null) return;
 
-        switch (pageName)
+        switch (destination)
         {
-            case "Settings":
-                if (NavSettings != null && NavSettings.IsChecked != true) NavSettings.IsChecked = true;
+            case MainPage.Settings:
                 MainContent.Content = MainContent.Resources["SettingsPage"];
                 break;
-            case "Backup":
-                if (NavBackup != null && NavBackup.IsChecked != true) NavBackup.IsChecked = true;
+            case MainPage.Backup:
                 _ = _vm.Backup.InitializeAsync();
                 MainContent.Content = MainContent.Resources["BackupPage"];
                 break;
-            case "Restore":
-                if (NavRestore != null && NavRestore.IsChecked != true) NavRestore.IsChecked = true;
+            case MainPage.Restore:
                 _ = _vm.Restore.InitializeAsync();
                 MainContent.Content = MainContent.Resources["RestorePage"];
                 break;
-            case "History":
-                if (NavHistory != null && NavHistory.IsChecked != true) NavHistory.IsChecked = true;
+            case MainPage.History:
                 _ = _vm.History.LoadRecordsAsync();
                 MainContent.Content = MainContent.Resources["HistoryPage"];
                 break;
-            case "Log":
-                if (NavLog != null && NavLog.IsChecked != true) NavLog.IsChecked = true;
-                MainContent.Content = MainContent.Resources["LogPage"];
-                break;
-            default:
-                var placeholder = new Border
-                {
-                    VerticalAlignment = VerticalAlignment.Center,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    Child = new TextBlock
-                    {
-                        Text = LocalizationService.S("Nav_Placeholder", pageName),
-                        FontSize = 16,
-                        Foreground = System.Windows.Media.Brushes.Gray
-                    }
-                };
-                MainContent.Content = placeholder;
-                break;
         }
+    }
+
+    private void ShowUnknownPage(string pageName)
+    {
+        if (MainContent == null) return;
+
+        MainContent.Content = new Border
+        {
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Child = new TextBlock
+            {
+                Text = LocalizationService.S("Nav_Placeholder", pageName),
+                FontSize = 16,
+                Foreground = System.Windows.Media.Brushes.Gray
+            }
+        };
     }
 
     private void LanguageComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)

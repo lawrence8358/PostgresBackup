@@ -166,6 +166,42 @@
   <data name="Restore_Log_Mode" xml:space="preserve">
     <value>還原模式: {0}</value>
   </data>
+  <data name="Restore_Log_PlanStart" xml:space="preserve">
+    <value>正在比對備份內容與目標資料庫，以找出遺漏物件...</value>
+  </data>
+  <data name="Restore_Log_DataPlanStart" xml:space="preserve">
+    <value>正在比對備份內容與目標資料庫，以準備僅資料還原...</value>
+  </data>
+  <data name="Restore_Log_PlanSummary" xml:space="preserve">
+    <value>還原計畫已建立：選取 {0} 個備份項目、略過 {1} 個既有項目、略過 {2} 個中繼資料項目。</value>
+  </data>
+  <data name="Restore_Error_ArchiveListFailed" xml:space="preserve">
+    <value>無法讀取備份檔案目錄：{0}</value>
+  </data>
+  <data name="Restore_Error_UnsupportedArchiveEntries" xml:space="preserve">
+    <value>備份檔包含目前一般還原尚未支援的物件類型：{0}。為避免修改既有物件，已在寫入前停止；請改用「清除並重建」，或先更新應用程式。</value>
+  </data>
+  <data name="Restore_Error_PlanFailed" xml:space="preserve">
+    <value>無法比對備份內容與目標資料庫：{0}</value>
+  </data>
+  <data name="Restore_Log_DataPlanSummary" xml:space="preserve">
+    <value>資料還原計畫已建立：{0} 張目標資料表、{1} 個資料項目。</value>
+  </data>
+  <data name="Restore_Error_UnsupportedDataEntries" xml:space="preserve">
+    <value>備份檔包含目前僅資料還原尚未支援的資料類型：{0}。為避免破壞既有資料，已在寫入前停止。</value>
+  </data>
+  <data name="Restore_Error_DataTargetsMissing" xml:space="preserve">
+    <value>僅資料還原需要目標結構已存在；下列目標物件不存在：{0}。</value>
+  </data>
+  <data name="Restore_Error_DataDependencyCycle" xml:space="preserve">
+    <value>僅寫入資料已在清空資料前停止，因為下列資料表存在循環外鍵相依，無法安全排序：{0}。此備份請改用「清除並重新建立」。</value>
+  </data>
+  <data name="Restore_Log_DataClearStart" xml:space="preserve">
+    <value>正在清空備份涵蓋的 {0} 張資料表，以準備資料還原...</value>
+  </data>
+  <data name="Restore_Error_DataClearFailed" xml:space="preserve">
+    <value>無法清空目標既有資料，尚未啟動 pg_restore：{0}</value>
+  </data>
   <data name="Restore_Log_Success" xml:space="preserve">
     <value>還原作業成功完成！總耗時: {0}</value>
   </data>

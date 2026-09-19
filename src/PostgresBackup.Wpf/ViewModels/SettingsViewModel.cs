@@ -15,21 +15,27 @@ public partial class SettingsViewModel : ObservableObject
 {
     private readonly IToolDetectionService _toolDetector;
     private readonly IConnectionProfileRepository _profileRepo;
+    private readonly IClientToolPreferencesStore _clientToolPreferences;
 
     public SettingsViewModel(
         IToolDetectionService toolDetector,
-        IConnectionProfileRepository profileRepo)
+        IConnectionProfileRepository profileRepo,
+        IClientToolPreferencesStore? clientToolPreferences = null)
     {
         _toolDetector = toolDetector;
         _profileRepo = profileRepo;
+        _clientToolPreferences = clientToolPreferences ?? new NullClientToolPreferencesStore();
 
         LocalizationService.Instance.PropertyChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(CopyButtonText));
             OnPropertyChanged(nameof(SourceDisplay));
             OnPropertyChanged(nameof(ToolVersionDisplay));
+            OnPropertyChanged(nameof(ToolPresentationStatusText));
             RefreshToolStatusMessage();
         };
+
+        RefreshToolStatusMessage();
     }
 
     // ── 客戶端工具偵測狀態 ──
@@ -44,6 +50,12 @@ public partial class SettingsViewModel : ObservableObject
     private bool _isDetecting;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowAllToolsReady))]
+    [NotifyPropertyChangedFor(nameof(ShowGuide))]
+    [NotifyPropertyChangedFor(nameof(ToolPresentationStatusText))]
+    private ToolDetectionPresentationState _toolPresentationState = ToolDetectionPresentationState.NotChecked;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CopyButtonText))]
     private bool _isCopied;
 
@@ -56,7 +68,10 @@ public partial class SettingsViewModel : ObservableObject
 
     public ToolStatus ToolStatus => ToolResult.Status;
     public bool IsReady => ToolResult.IsReady;
-    public bool ShowGuide => ToolResult.Status != ToolStatus.Ready;
+    public bool ShowGuide => ToolPresentationState != ToolDetectionPresentationState.Ready;
+    public bool ShowAllToolsReady => ToolPresentationState == ToolDetectionPresentationState.Ready;
+
+    public string ToolPresentationStatusText => LocalizationService.S($"Settings_ToolPresentation_{ToolPresentationState}");
 
     public string SourceDisplay => LocalizationService.S("Settings_ToolSource_Format", ToolResult.Source switch
     {
@@ -110,6 +125,15 @@ public partial class SettingsViewModel : ObservableObject
 
     public async Task InitializeAsync()
     {
+        try
+        {
+            CustomPath = await _clientToolPreferences.LoadCustomToolDirectoryAsync();
+        }
+        catch
+        {
+            // Preferences are a convenience. An unreadable preference must not block tool detection.
+        }
+
         await LoadProfilesAsync();
         await DetectToolsAsync();
     }
@@ -246,6 +270,7 @@ public partial class SettingsViewModel : ObservableObject
         if (IsDetecting) return;
 
         IsDetecting = true;
+        ToolPresentationState = ToolDetectionPresentationState.Detecting;
         try
         {
             ToolResult = await _toolDetector.DetectAsync(CustomPath);
@@ -256,6 +281,31 @@ public partial class SettingsViewModel : ObservableObject
             OnPropertyChanged(nameof(SourceDisplay));
             OnPropertyChanged(nameof(ToolVersionDisplay));
 
+            ToolPresentationState = ToPresentationState(ToolResult.Status);
+            RefreshToolStatusMessage();
+
+            if (ToolResult.Status == ToolStatus.Ready &&
+                ToolResult.Source == DetectionSource.CustomPath &&
+                !string.IsNullOrWhiteSpace(CustomPath))
+            {
+                try
+                {
+                    await _clientToolPreferences.SaveCustomToolDirectoryAsync(CustomPath);
+                }
+                catch
+                {
+                    // A completed detection remains valid even when its convenience preference cannot be saved.
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ToolResult = ToolDetectionResult.CreateNotFound(ex.Message);
+            ToolPresentationState = ToolDetectionPresentationState.NotFound;
+            OnPropertyChanged(nameof(ToolStatus));
+            OnPropertyChanged(nameof(IsReady));
+            OnPropertyChanged(nameof(SourceDisplay));
+            OnPropertyChanged(nameof(ToolVersionDisplay));
             RefreshToolStatusMessage();
         }
         finally
@@ -266,6 +316,18 @@ public partial class SettingsViewModel : ObservableObject
 
     private void RefreshToolStatusMessage()
     {
+        if (ToolPresentationState == ToolDetectionPresentationState.NotChecked)
+        {
+            StatusMessage = LocalizationService.S("Settings_ToolStatus_NotCheckedMessage");
+            return;
+        }
+
+        if (ToolPresentationState == ToolDetectionPresentationState.Detecting)
+        {
+            StatusMessage = LocalizationService.S("Settings_ToolStatus_DetectingMessage");
+            return;
+        }
+
         StatusMessage = ToolResult.Status switch
         {
             ToolStatus.Ready => LocalizationService.S("Settings_ToolStatus_ReadyMessage", ToolResult.Version),
@@ -273,6 +335,13 @@ public partial class SettingsViewModel : ObservableObject
             _ => ToolResult.ErrorMessage ?? LocalizationService.S("Settings_ToolStatus_NotFoundMessage")
         };
     }
+
+    private static ToolDetectionPresentationState ToPresentationState(ToolStatus status) => status switch
+    {
+        ToolStatus.Ready => ToolDetectionPresentationState.Ready,
+        ToolStatus.Incompatible => ToolDetectionPresentationState.Incompatible,
+        _ => ToolDetectionPresentationState.NotFound
+    };
 
     [RelayCommand]
     private void BrowseCustomPath()
@@ -318,6 +387,19 @@ public partial class SettingsViewModel : ObservableObject
         try
         {
             Process.Start(new ProcessStartInfo("https://www.enterprisedb.com/downloads/postgres-postgresql-downloads")
+            {
+                UseShellExecute = true
+            });
+        }
+        catch { }
+    }
+
+    [RelayCommand]
+    private void OpenEdbPortableBinariesUrl()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo("https://www.enterprisedb.com/download-postgresql-binaries")
             {
                 UseShellExecute = true
             });

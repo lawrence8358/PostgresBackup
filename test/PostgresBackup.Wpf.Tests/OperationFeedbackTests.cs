@@ -9,7 +9,7 @@ namespace PostgresBackup.Wpf.Tests;
 public class OperationFeedbackTests
 {
     [Fact]
-    public async Task Backup_shows_busy_state_and_streams_live_log_to_both_views()
+    public async Task Backup_shows_busy_state_and_streams_live_terminal_output()
     {
         var repository = new Mock<IConnectionProfileRepository>();
         repository
@@ -28,8 +28,7 @@ public class OperationFeedbackTests
                 onLogLine?.Invoke("[pg_dump] still running"))
             .Returns(completion.Task);
 
-        var globalLog = new LogViewModel();
-        var vm = new BackupViewModel(backupService.Object, repository.Object, logViewModel: globalLog)
+        var vm = new BackupViewModel(backupService.Object, repository.Object)
         {
             SelectedProfile = new ConnectionProfile { Id = "profile-1", Database = "postgres" }
         };
@@ -38,8 +37,7 @@ public class OperationFeedbackTests
 
         Assert.True(vm.IsBackingUp);
         Assert.Equal(OperationStatusKind.Running, vm.StatusKind);
-        Assert.Contains("[pg_dump] still running", vm.TerminalOutput);
-        Assert.Contains("[pg_dump] still running", globalLog.LogContent);
+        await WaitForTerminalLineAsync(vm, "[pg_dump] still running");
 
         completion.SetResult(BackupResult.Success(
             "backup.dump", 1, TimeSpan.Zero, string.Empty, BackupFormat.Custom));
@@ -50,7 +48,7 @@ public class OperationFeedbackTests
     }
 
     [Fact]
-    public async Task Restore_shows_busy_state_and_streams_live_log_to_both_views()
+    public async Task Restore_shows_busy_state_and_streams_live_terminal_output()
     {
         var sourceFilePath = Path.Combine(
             Path.GetTempPath(), $"restore-feedback-{Guid.NewGuid():N}.dump");
@@ -75,8 +73,7 @@ public class OperationFeedbackTests
                     onLogLine?.Invoke("[pg_restore] still running"))
                 .Returns(completion.Task);
 
-            var globalLog = new LogViewModel();
-            var vm = new RestoreViewModel(restoreService.Object, repository.Object, logViewModel: globalLog)
+            var vm = new RestoreViewModel(restoreService.Object, repository.Object)
             {
                 SourceFilePath = sourceFilePath,
                 SelectedProfile = new ConnectionProfile { Id = "profile-1", Database = "postgres" },
@@ -89,8 +86,7 @@ public class OperationFeedbackTests
             Assert.True(vm.IsRestoring);
             Assert.False(vm.CanStartRestore);
             Assert.Equal(OperationStatusKind.Running, vm.StatusKind);
-            Assert.Contains("[pg_restore] still running", vm.TerminalOutput);
-            Assert.Contains("[pg_restore] still running", globalLog.LogContent);
+            await WaitForTerminalLineAsync(vm, "[pg_restore] still running");
 
             completion.SetResult(RestoreResult.Success(TimeSpan.Zero, string.Empty));
             await operation;
@@ -103,5 +99,23 @@ public class OperationFeedbackTests
         {
             File.Delete(sourceFilePath);
         }
+    }
+
+    private static async Task WaitForTerminalLineAsync(object viewModel, string expectedLine)
+    {
+        Func<string> terminalOutput = viewModel switch
+        {
+            BackupViewModel backup => () => backup.TerminalOutput,
+            RestoreViewModel restore => () => restore.TerminalOutput,
+            _ => throw new ArgumentOutOfRangeException(nameof(viewModel))
+        };
+
+        var deadline = DateTime.UtcNow.AddSeconds(1);
+        while (!terminalOutput().Contains(expectedLine, StringComparison.Ordinal) && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(20);
+        }
+
+        Assert.Contains(expectedLine, terminalOutput());
     }
 }

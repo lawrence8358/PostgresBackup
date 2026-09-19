@@ -56,18 +56,22 @@
                 </Border>
 
                 <!-- 底部版本資訊 -->
-                <TextBlock x:Name="VersionTextBlock"
-                           DockPanel.Dock="Bottom"
-                           Text="v1.0.0"
-                           FontSize="10"
-                           Foreground="{DynamicResource SecondaryTextBrush}"
-                           HorizontalAlignment="Center"
-                           Margin="12,0,12,12"/>
+                <Border DockPanel.Dock="Bottom"
+                        Background="#E8F5E9"
+                        BorderBrush="#C8E6C9"
+                        BorderThickness="0,1,0,0"
+                        Padding="12,8">
+                    <TextBlock Text="{Binding VersionDisplay}"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource DarkPrimaryBrush}"
+                               HorizontalAlignment="Center"/>
+                </Border>
 
                 <!-- 語系切換器 -->
                 <ComboBox x:Name="LanguageComboBox"
                           DockPanel.Dock="Bottom"
-                          Margin="14,0,14,8"
+                          Margin="14,0,14,10"
                           Height="30"
                           ItemsSource="{x:Static svc:LocalizationService.SupportedLanguages}"
                           SelectionChanged="LanguageComboBox_SelectionChanged">
@@ -125,17 +129,6 @@
                                 <TextBlock Text="{l:Loc Nav_History}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </RadioButton>
-                        <RadioButton x:Name="NavLog"
-                                     Style="{StaticResource NavMenuRadioButtonStyle}"
-                                     Checked="Nav_Checked" Tag="Log"
-                                     Margin="0,4,0,0">
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <Path Data="{StaticResource IconLogGeometry}"
-                                      Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
-                                      Width="14" Height="14" Stretch="Uniform" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="{l:Loc Nav_Log}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </RadioButton>
                     </StackPanel>
                 </ScrollViewer>
             </DockPanel>
@@ -149,7 +142,6 @@
                     <views:BackupView x:Key="BackupPage" DataContext="{Binding Backup}"/>
                     <views:RestoreView x:Key="RestorePage" DataContext="{Binding Restore}"/>
                     <views:HistoryView x:Key="HistoryPage" DataContext="{Binding History}"/>
-                    <views:LogView x:Key="LogPage" DataContext="{Binding Log}"/>
                 </ContentControl.Resources>
             </ContentControl>
         </Border>

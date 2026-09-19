@@ -12,31 +12,32 @@ public partial class MainViewModel : ObservableObject
     public BackupViewModel Backup { get; }
     public RestoreViewModel Restore { get; }
     public HistoryViewModel History { get; }
-    public LogViewModel Log { get; }
+    public MainNavigation Navigation { get; } = new();
 
-    public event Action<string>? NavigationRequested;
+    public string VersionDisplay => LocalizationService.S("App_Version_Format", ApplicationVersion.Current);
 
     public MainViewModel(
         SettingsViewModel settings,
         BackupViewModel backup,
         RestoreViewModel restore,
-        HistoryViewModel history,
-        LogViewModel log)
+        HistoryViewModel history)
     {
         Settings = settings;
         Backup = backup;
         Restore = restore;
         History = history;
-        Log = log;
-
         History.RequestRestore += OnRequestRestore;
 
-        LocalizationService.Instance.PropertyChanged += (_, _) => OnPropertyChanged(nameof(WindowTitle));
+        LocalizationService.Instance.PropertyChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(WindowTitle));
+            OnPropertyChanged(nameof(VersionDisplay));
+        };
     }
 
     private void OnRequestRestore(BackupRecord record)
     {
         Restore.SetRestoreTarget(record.FilePath, record.DatabaseName);
-        NavigationRequested?.Invoke("Restore");
+        Navigation.NavigateTo(MainPage.Restore);
     }
 }

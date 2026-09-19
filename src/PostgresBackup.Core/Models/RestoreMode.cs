@@ -16,7 +16,7 @@ public enum RestoreMode
     CleanAndRecreate,
 
     /// <summary>
-    /// 僅寫入資料 (--data-only)
+    /// 清空備份涵蓋的既有資料表，再僅還原資料 (--data-only)
     /// </summary>
     DataOnly
 }

@@ -6,15 +6,18 @@
              xmlns:hc="https://handyorg.github.io/handycontrol"
              xmlns:converters="clr-namespace:PostgresBackup.Wpf.Converters"
              xmlns:l="clr-namespace:PostgresBackup.Wpf.Extensions"
+             FontSize="13"
              mc:Ignorable="d">
     <UserControl.Resources>
         <converters:InvertBoolConverter x:Key="InvertBoolConverter"/>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-        <converters:ToolStatusToBrushConverter x:Key="ToolStatusToBrushConverter"/>
+        <converters:ToolDetectionPresentationStateToBrushConverter x:Key="ToolDetectionPresentationStateToBrushConverter"/>
     </UserControl.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-        <StackPanel Margin="24,14,24,16" MaxWidth="850">
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  HorizontalContentAlignment="Stretch">
+        <StackPanel Margin="24,14,24,16">
 
             <!-- 頁面標題 -->
             <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
@@ -48,10 +51,10 @@
 
                                 <!-- 狀態燈號 Badge -->
                                 <Border Grid.Column="0"
-                                        Background="{Binding ToolStatus, Converter={StaticResource ToolStatusToBrushConverter}}"
+                                        Background="{Binding ToolPresentationState, Converter={StaticResource ToolDetectionPresentationStateToBrushConverter}}"
                                         CornerRadius="4" Padding="8,3" Margin="0,0,12,0"
                                         VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding ToolResult.Status}"
+                                    <TextBlock Text="{Binding ToolPresentationStatusText}"
                                                FontWeight="Bold" Foreground="White" FontSize="11"/>
                                 </Border>
 
@@ -75,7 +78,8 @@
                         </Border>
 
                         <!-- 詳細工具狀態提示列 (簡潔單行，清楚明確又節省空間) -->
-                        <Grid Margin="0,0,0,4">
+                        <Grid Margin="0,0,0,4"
+                              Visibility="{Binding ShowAllToolsReady, Converter={StaticResource BoolToVisibilityConverter}}">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
@@ -189,6 +193,16 @@
                                             <Path Data="{StaticResource IconLinkGeometry}" Fill="{DynamicResource PrimaryBrush}"
                                                   Width="12" Height="12" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center"/>
                                             <TextBlock Text="{l:Loc Settings_Guide_EdbDownload}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Style="{StaticResource ButtonDefault}"
+                                            Command="{Binding OpenEdbPortableBinariesUrlCommand}"
+                                            Margin="0,0,0,4" Padding="14,0" Height="30">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Path Data="{StaticResource IconLinkGeometry}" Fill="{DynamicResource PrimaryBrush}"
+                                                  Width="12" Height="12" Stretch="Uniform" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{l:Loc Settings_Guide_EdbPortableBinariesDownload}" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
                                 </WrapPanel>

@@ -47,7 +47,7 @@ public static class RestoreCommand
 
         var modeOption = new Option<string?>("--mode", "-m")
         {
-            Description = "還原模式：normal (一般還原), clean (清除並重建物件 --clean --if-exists), data (僅資料 --data-only)，預設為 normal"
+            Description = "還原模式：normal (補建遺漏物件), clean (清除並重建物件), data (清空備份涵蓋的資料表後還原資料)，預設為 normal"
         };
 
         var noSnapshotOption = new Option<bool>("--no-snapshot")

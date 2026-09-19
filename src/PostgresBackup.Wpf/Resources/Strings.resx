@@ -76,9 +76,6 @@
   <data name="Nav_History" xml:space="preserve">
     <value>History</value>
   </data>
-  <data name="Nav_Log" xml:space="preserve">
-    <value>Log</value>
-  </data>
   <data name="Settings_Title" xml:space="preserve">
     <value>Settings &amp; Tool Detection</value>
   </data>
@@ -281,7 +278,7 @@
     <value>Normal Restore (Create missing objects)</value>
   </data>
   <data name="Restore_Mode_DataOnly" xml:space="preserve">
-    <value>Data Only (--data-only)</value>
+    <value>Replace Table Data (truncate, then restore)</value>
   </data>
   <data name="Restore_Snapshot_Label" xml:space="preserve">
     <value>Pre-Restore Safety Snapshot</value>
@@ -364,9 +361,6 @@
   <data name="History_Refresh" xml:space="preserve">
     <value>Refresh</value>
   </data>
-  <data name="Log_Title" xml:space="preserve">
-    <value>System Execution Logs</value>
-  </data>
   <data name="Settings_PsqlPath" xml:space="preserve">
     <value>psql Path</value>
   </data>
@@ -387,9 +381,6 @@
   </data>
   <data name="Backup_Tables_Placeholder" xml:space="preserve">
     <value>e.g. users, orders, payments</value>
-  </data>
-  <data name="Log_StreamTitle" xml:space="preserve">
-    <value>Global Real-time Execution Stream</value>
   </data>
   <data name="Settings_Guide_LicenseNotice" xml:space="preserve">
     <value>Official PostgreSQL client tools (pg_dump / pg_restore / psql) are licensed under the open-source PostgreSQL License (BSD-compatible), allowing 100% free commercial use and distribution with zero royalties.</value>
@@ -438,12 +429,6 @@
   </data>
   <data name="Status_Error" xml:space="preserve">
     <value>Error</value>
-  </data>
-  <data name="Log_Header" xml:space="preserve">
-    <value>=== PostgresBackup System Log ===</value>
-  </data>
-  <data name="Log_Header_Cleared" xml:space="preserve">
-    <value>=== PostgresBackup System Log (cleared) ===</value>
   </data>
   <data name="Backup_Dialog_SelectOutputDir" xml:space="preserve">
     <value>Select the backup output directory</value>
@@ -582,5 +567,47 @@
   </data>
   <data name="Profile_Store_PasswordLoadFailed" xml:space="preserve">
     <value>Could not read the saved password for this connection profile: {0}</value>
+  </data>
+  <data name="Settings_ToolPresentation_NotChecked" xml:space="preserve">
+    <value>Not checked</value>
+  </data>
+  <data name="Settings_ToolPresentation_Detecting" xml:space="preserve">
+    <value>Checking</value>
+  </data>
+  <data name="Settings_ToolPresentation_Ready" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="Settings_ToolPresentation_Incompatible" xml:space="preserve">
+    <value>Incompatible</value>
+  </data>
+  <data name="Settings_ToolPresentation_NotFound" xml:space="preserve">
+    <value>Not found</value>
+  </data>
+  <data name="Settings_ToolStatus_NotCheckedMessage" xml:space="preserve">
+    <value>Client tools have not been checked yet.</value>
+  </data>
+  <data name="Settings_ToolStatus_DetectingMessage" xml:space="preserve">
+    <value>Checking PostgreSQL client tools…</value>
+  </data>
+  <data name="Settings_Guide_EdbPortableBinariesDownload" xml:space="preserve">
+    <value>EDB portable Windows binaries</value>
+  </data>
+  <data name="App_Version_Format" xml:space="preserve">
+    <value>Version v{0}</value>
+  </data>
+  <data name="Common_ErrorDetails" xml:space="preserve">
+    <value>Error details</value>
+  </data>
+  <data name="Common_CopyError" xml:space="preserve">
+    <value>Copy error</value>
+  </data>
+  <data name="Backup_Status_Failed_Summary" xml:space="preserve">
+    <value>Backup failed. See error details below.</value>
+  </data>
+  <data name="Restore_Status_Failed_Summary" xml:space="preserve">
+    <value>Restore failed. See error details below.</value>
+  </data>
+  <data name="Common_UnexpectedError_Summary" xml:space="preserve">
+    <value>An unexpected error occurred. See error details below.</value>
   </data>
 </root>

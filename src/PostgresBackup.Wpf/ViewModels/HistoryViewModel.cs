@@ -49,6 +49,8 @@ public partial class HistoryViewModel : ObservableObject
         {
             Records.Add(record);
         }
+
+        SelectedRecord = Records.Count > 1 ? Records[1] : Records.FirstOrDefault();
     }
 
     [RelayCommand]

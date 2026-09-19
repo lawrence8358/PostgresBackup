@@ -6,6 +6,7 @@
              xmlns:hc="https://handyorg.github.io/handycontrol"
              xmlns:converters="clr-namespace:PostgresBackup.Wpf.Converters"
              xmlns:l="clr-namespace:PostgresBackup.Wpf.Extensions"
+             FontSize="13"
              mc:Ignorable="d">
     <UserControl.Resources>
         <converters:InvertBoolConverter x:Key="InvertBoolConverter"/>
@@ -97,19 +98,46 @@
                               GridLinesVisibility="Horizontal"
                               HeadersVisibility="Column"
                               Background="White"
+                              FontSize="13"
                               RowHeight="40"
                               BorderBrush="{DynamicResource BorderBrush}"
                               BorderThickness="1"
                               HorizontalScrollBarVisibility="Auto"
                               VerticalScrollBarVisibility="Auto">
+                        <!-- HandyControl explicitly assigns RowStyle and CellStyle on DataGrid,
+                             so these overrides must be assigned to the properties as well. -->
+                        <DataGrid.RowStyle>
+                            <Style TargetType="{x:Type DataGridRow}" BasedOn="{StaticResource DataGridRowStyle}">
+                                <Setter Property="Foreground" Value="{DynamicResource PrimaryTextBrush}"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="#E8F1EA"/>
+                                        <Setter Property="Foreground" Value="#212121"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
+                        <DataGrid.CellStyle>
+                            <Style TargetType="{x:Type DataGridCell}" BasedOn="{StaticResource DataGridCellStyle}">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="Foreground" Value="#212121"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.CellStyle>
                         <DataGrid.Columns>
                             <!-- 時間 -->
                             <DataGridTextColumn Header="{l:Loc History_Col_Time}"
                                                 Binding="{Binding Timestamp, StringFormat='yyyy-MM-dd HH:mm:ss'}"
-                                                Width="140"/>
+                                                Width="140" MinWidth="140"/>
 
                             <!-- 作業類型 -->
-                            <DataGridTemplateColumn Header="{l:Loc History_Col_Type}" Width="90">
+                            <DataGridTemplateColumn Header="{l:Loc History_Col_Type}" Width="90" MinWidth="90">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Border Background="#102E7D32" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" VerticalAlignment="Center">
@@ -124,25 +152,25 @@
                             <DataGridTextColumn Header="{l:Loc History_Col_Db}"
                                                 Binding="{Binding DatabaseName}"
                                                 FontWeight="Medium"
-                                                Width="105"/>
+                                                Width="*" MinWidth="180"/>
 
                             <!-- 格式 -->
                             <DataGridTextColumn Header="{l:Loc History_Col_Format}"
                                                 Binding="{Binding Format}"
-                                                Width="70"/>
+                                                Width="70" MinWidth="70"/>
 
                             <!-- 檔案大小 -->
                             <DataGridTextColumn Header="{l:Loc History_Col_Size}"
                                                 Binding="{Binding FormattedSize}"
-                                                Width="90"/>
+                                                Width="90" MinWidth="90"/>
 
                             <!-- 耗時 -->
                             <DataGridTextColumn Header="{l:Loc History_Col_Duration}"
                                                 Binding="{Binding FormattedDuration}"
-                                                Width="85"/>
+                                                Width="85" MinWidth="85"/>
 
                             <!-- 狀態 Badge -->
-                            <DataGridTemplateColumn Header="{l:Loc History_Col_Status}" Width="80">
+                            <DataGridTemplateColumn Header="{l:Loc History_Col_Status}" Width="80" MinWidth="80">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <Border Background="{Binding Status, Converter={StaticResource BackupStatusToBrushConverter}}"
@@ -155,7 +183,7 @@
                             </DataGridTemplateColumn>
 
                             <!-- 動作按鈕 -->
-                            <DataGridTemplateColumn Header="{l:Loc History_Col_Actions}" Width="220">
+                            <DataGridTemplateColumn Header="{l:Loc History_Col_Actions}" Width="Auto" MinWidth="220">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">

@@ -25,6 +25,8 @@ public partial class App : Application
         services.AddSingleton<IProcessRunner, ProcessRunner>();
         services.AddSingleton<IEnvironmentProbe, WindowsEnvironmentProbe>();
         services.AddSingleton<IToolDetectionService, ToolDetectionService>();
+        services.AddSingleton<IClientToolPreferencesStore, JsonClientToolPreferencesStore>();
+        services.AddSingleton<IClipboardService, WpfClipboardService>();
         services.AddSingleton<ICredentialStorage, WindowsCredentialStorage>();
         services.AddSingleton<IConnectionProfileRepository, JsonConnectionProfileRepository>();
         services.AddSingleton<IBackupHistoryRepository, SqliteBackupHistoryRepository>();
@@ -36,7 +38,6 @@ public partial class App : Application
         services.AddSingleton<BackupViewModel>();
         services.AddSingleton<RestoreViewModel>();
         services.AddSingleton<HistoryViewModel>();
-        services.AddSingleton<LogViewModel>();
         services.AddSingleton<MainViewModel>();
 
         // 註冊視窗

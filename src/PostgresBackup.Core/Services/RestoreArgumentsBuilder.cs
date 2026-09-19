@@ -8,7 +8,7 @@ namespace PostgresBackup.Core.Services;
 /// </summary>
 public static class RestoreArgumentsBuilder
 {
-    public static string Build(RestoreOptions options)
+    public static string Build(RestoreOptions options, string? useListFilePath = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         if (string.IsNullOrWhiteSpace(options.SourceFilePath))
@@ -31,15 +31,36 @@ public static class RestoreArgumentsBuilder
             // pg_restore 模式旗標
             switch (options.Mode)
             {
+                case RestoreMode.Normal:
+                    if (string.IsNullOrWhiteSpace(useListFilePath))
+                    {
+                        throw new InvalidOperationException(
+                            "Normal restore requires a filtered archive list.");
+                    }
+
+                    sb.Append($" --use-list \"{Escape(useListFilePath)}\"");
+                    // Defense in depth: if a target object appears between inspection
+                    // and restore, never copy archive data into that existing table.
+                    sb.Append(" --no-data-for-failed-tables");
+                    break;
                 case RestoreMode.CleanAndRecreate:
                     // Restore into the selected target database. --create would use the
                     // database name stored in the archive, which breaks cross-database restores.
                     sb.Append(" --clean --if-exists");
                     break;
                 case RestoreMode.DataOnly:
-                    sb.Append(" --data-only");
+                    if (string.IsNullOrWhiteSpace(useListFilePath))
+                    {
+                        throw new InvalidOperationException(
+                            "Data-only restore requires an ordered archive list.");
+                    }
+
+                    sb.Append($" --data-only --use-list \"{Escape(useListFilePath)}\"");
                     break;
             }
+
+            // Never continue through the remaining TOC after a genuine restore error.
+            sb.Append(" --exit-on-error");
 
             // 詳細進度輸出
             sb.Append(" -v");

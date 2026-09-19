@@ -15,17 +15,23 @@ public class RestoreService : IRestoreService
     private readonly IToolDetectionService _toolDetector;
     private readonly IBackupService? _backupService;
     private readonly IBackupHistoryRepository? _historyRepo;
+    private readonly IRestoreTargetCatalogReader _catalogReader;
+    private readonly IRestoreDataPreparationService _dataPreparationService;
 
     public RestoreService(
         IProcessRunner processRunner,
         IToolDetectionService toolDetector,
         IBackupService? backupService = null,
-        IBackupHistoryRepository? historyRepo = null)
+        IBackupHistoryRepository? historyRepo = null,
+        IRestoreTargetCatalogReader? catalogReader = null,
+        IRestoreDataPreparationService? dataPreparationService = null)
     {
         _processRunner = processRunner;
         _toolDetector = toolDetector;
         _backupService = backupService;
         _historyRepo = historyRepo;
+        _catalogReader = catalogReader ?? new NpgsqlRestoreTargetCatalogReader();
+        _dataPreparationService = dataPreparationService ?? new NpgsqlRestoreDataPreparationService();
     }
 
     public async Task<RestoreResult> RestoreAsync(
@@ -76,10 +82,104 @@ public class RestoreService : IRestoreService
             ? options.TargetDatabase
             : options.Connection.Database;
 
+        var envVars = BuildEnvironmentVariables(options.Connection.Password);
+        RestoreArchivePlan? restorePlan = null;
+        RestoreDataPlan? dataPlan = null;
+
+        // Planning is read-only. Run it before the safety snapshot so a no-op restore
+        // does not spend minutes producing an unnecessary full backup.
+        if (options.Format == BackupFormat.Custom
+            && options.Mode is RestoreMode.Normal or RestoreMode.DataOnly)
+        {
+            var planLogKey = options.Mode == RestoreMode.Normal
+                ? "Restore_Log_PlanStart"
+                : "Restore_Log_DataPlanStart";
+            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Get(planLogKey)}");
+            var listArgs = $"--list \"{EscapeArgument(options.SourceFilePath)}\"";
+            var listResult = await _processRunner.RunAsync(
+                toolExecutablePath,
+                listArgs,
+                envVars,
+                ct: ct);
+
+            if (!listResult.Success)
+            {
+                var detail = listResult.ErrorMessage ?? CoreStrings.Get("Restore_Error_NonZeroExit");
+                var errMsg = CoreStrings.Format("Restore_Error_ArchiveListFailed", detail);
+                onLogLine?.Invoke($"[ERROR] {errMsg}");
+                return RestoreResult.Failure(errMsg, listResult.ExitCode, stopwatch.Elapsed, listArgs);
+            }
+
+            try
+            {
+                var targetCatalog = await _catalogReader.ReadAsync(options.Connection, targetDb, ct);
+                if (options.Mode == RestoreMode.Normal)
+                {
+                    restorePlan = RestoreArchivePlanner.Build(listResult.StandardOutput, targetCatalog);
+                    if (restorePlan.UnsupportedDescriptions.Count > 0)
+                    {
+                        var descriptions = string.Join(", ", restorePlan.UnsupportedDescriptions);
+                        var errMsg = CoreStrings.Format("Restore_Error_UnsupportedArchiveEntries", descriptions);
+                        onLogLine?.Invoke($"[ERROR] {errMsg}");
+                        return RestoreResult.Failure(errMsg, -1, stopwatch.Elapsed, listArgs);
+                    }
+
+                    onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format(
+                        "Restore_Log_PlanSummary",
+                        restorePlan.IncludedCount,
+                        restorePlan.SkippedExistingCount,
+                        restorePlan.SkippedMetadataCount)}");
+                }
+                else
+                {
+                    dataPlan = RestoreArchivePlanner.BuildDataOnly(listResult.StandardOutput, targetCatalog);
+                    if (dataPlan.UnsupportedDescriptions.Count > 0)
+                    {
+                        var descriptions = string.Join(", ", dataPlan.UnsupportedDescriptions);
+                        var errMsg = CoreStrings.Format("Restore_Error_UnsupportedDataEntries", descriptions);
+                        onLogLine?.Invoke($"[ERROR] {errMsg}");
+                        return RestoreResult.Failure(errMsg, -1, stopwatch.Elapsed, listArgs);
+                    }
+
+                    if (dataPlan.MissingObjects.Count > 0)
+                    {
+                        var objects = string.Join(", ", dataPlan.MissingObjects);
+                        var errMsg = CoreStrings.Format("Restore_Error_DataTargetsMissing", objects);
+                        onLogLine?.Invoke($"[ERROR] {errMsg}");
+                        return RestoreResult.Failure(errMsg, -1, stopwatch.Elapsed, listArgs);
+                    }
+
+                    if (dataPlan.CyclicTables.Count > 0)
+                    {
+                        var tables = string.Join(", ", dataPlan.CyclicTables);
+                        var errMsg = CoreStrings.Format("Restore_Error_DataDependencyCycle", tables);
+                        onLogLine?.Invoke($"[ERROR] {errMsg}");
+                        return RestoreResult.Failure(errMsg, -1, stopwatch.Elapsed, listArgs);
+                    }
+
+                    onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format(
+                        "Restore_Log_DataPlanSummary",
+                        dataPlan.Tables.Count,
+                        dataPlan.DataEntryCount)}");
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                var errMsg = CoreStrings.Format("Restore_Error_PlanFailed", ex.Message);
+                onLogLine?.Invoke($"[ERROR] {errMsg}");
+                return RestoreResult.Failure(errMsg, -1, stopwatch.Elapsed, listArgs);
+            }
+        }
+
         string? snapshotFilePath = null;
 
         // 3. 還原前安全快照 (Pre-Restore Snapshot) — 透過 BackupService 作業模組安全委任
-        if (options.CreatePreRestoreSnapshot)
+        var plannedChangeCount = restorePlan?.ActionableCount ?? dataPlan?.DataEntryCount ?? 1;
+        if (options.CreatePreRestoreSnapshot && plannedChangeCount > 0)
         {
             onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [SAFETY] {CoreStrings.Format("Restore_Log_SnapshotStart", targetDb)}");
 
@@ -139,34 +239,79 @@ public class RestoreService : IRestoreService
             onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [SAFETY SUCCESS] {CoreStrings.Format("Restore_Log_SnapshotSuccess", snapshotResult.FileSizeBytes)}");
         }
 
+        string? restoreListFilePath = null;
+        var restoreListContent = restorePlan?.Content ?? dataPlan?.Content;
+        if (restoreListContent is not null)
+        {
+            try
+            {
+                restoreListFilePath = Path.Combine(
+                    Path.GetTempPath(), $"PostgresBackup-restore-{Guid.NewGuid():N}.list");
+                await File.WriteAllTextAsync(restoreListFilePath, restoreListContent, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                DeleteRestoreListFile(restoreListFilePath);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                DeleteRestoreListFile(restoreListFilePath);
+                var errMsg = CoreStrings.Format("Restore_Error_PlanFailed", ex.Message);
+                onLogLine?.Invoke($"[ERROR] {errMsg}");
+                return RestoreResult.Failure(errMsg, -1, stopwatch.Elapsed, string.Empty, snapshotFilePath);
+            }
+        }
+
+        if (dataPlan is { Tables.Count: > 0 })
+        {
+            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [SAFETY] {CoreStrings.Format(
+                "Restore_Log_DataClearStart", dataPlan.Tables.Count)}");
+            try
+            {
+                await _dataPreparationService.ClearTablesAsync(
+                    options.Connection, targetDb, dataPlan.Tables, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                DeleteRestoreListFile(restoreListFilePath);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                DeleteRestoreListFile(restoreListFilePath);
+                var errMsg = CoreStrings.Format("Restore_Error_DataClearFailed", ex.Message);
+                onLogLine?.Invoke($"[ERROR] {errMsg}");
+                return RestoreResult.Failure(errMsg, -1, stopwatch.Elapsed, string.Empty, snapshotFilePath);
+            }
+        }
+
         // 4. 執行還原作業
-        var restoreArgs = RestoreArgumentsBuilder.Build(options);
+        var restoreArgs = RestoreArgumentsBuilder.Build(options, restoreListFilePath);
         var toolNameDisplay = Path.GetFileNameWithoutExtension(toolExecutablePath);
 
         onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Restore_Log_Start", toolNameDisplay, targetDb)}");
         onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Restore_Log_SourceFile", options.SourceFilePath)}");
         onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Restore_Log_Mode", options.Mode)}");
 
-        var envVars = new Dictionary<string, string?>();
-        if (!string.IsNullOrEmpty(options.Connection.Password))
+        ProcessResult restoreProc;
+        try
         {
-            envVars["PGPASSWORD"] = options.Connection.Password;
+            restoreProc = await _processRunner.RunAsync(
+                toolExecutablePath,
+                restoreArgs,
+                envVars,
+                onOutputLine: line => onLogLine?.Invoke($"[{toolNameDisplay}] {line}"),
+                onErrorLine: line => onLogLine?.Invoke($"[{toolNameDisplay}] {line}"),
+                ct: ct);
         }
-        // Keep client data encoding explicit and avoid localized Windows messages
-        // being emitted in a code page that the redirected process cannot decode.
-        envVars["PGCLIENTENCODING"] = "UTF8";
-        envVars["LC_ALL"] = "C";
-        envVars["LC_MESSAGES"] = "C";
-        envVars["LANG"] = "C";
-        envVars["LANGUAGE"] = null;
-
-        var restoreProc = await _processRunner.RunAsync(
-            toolExecutablePath,
-            restoreArgs,
-            envVars,
-            onOutputLine: line => onLogLine?.Invoke($"[{toolNameDisplay}] {line}"),
-            onErrorLine: line => onLogLine?.Invoke($"[{toolNameDisplay}] {line}"),
-            ct: ct);
+        finally
+        {
+            if (!string.IsNullOrWhiteSpace(restoreListFilePath))
+            {
+                DeleteRestoreListFile(restoreListFilePath);
+            }
+        }
 
         stopwatch.Stop();
 
@@ -229,5 +374,28 @@ public class RestoreService : IRestoreService
 
             return RestoreResult.Failure(err, restoreProc.ExitCode, stopwatch.Elapsed, restoreArgs, snapshotFilePath);
         }
+    }
+
+    private static Dictionary<string, string?> BuildEnvironmentVariables(string? password)
+    {
+        var envVars = new Dictionary<string, string?>();
+        if (!string.IsNullOrEmpty(password)) envVars["PGPASSWORD"] = password;
+
+        // Keep client data encoding explicit and avoid localized Windows messages
+        // being emitted in a code page that the redirected process cannot decode.
+        envVars["PGCLIENTENCODING"] = "UTF8";
+        envVars["LC_ALL"] = "C";
+        envVars["LC_MESSAGES"] = "C";
+        envVars["LANG"] = "C";
+        envVars["LANGUAGE"] = null;
+        return envVars;
+    }
+
+    private static string EscapeArgument(string value) => value.Replace("\"", "\\\"");
+
+    private static void DeleteRestoreListFile(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return;
+        try { File.Delete(path); } catch { }
     }
 }

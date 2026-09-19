@@ -1,5 +1,7 @@
 using System.IO;
+using System.Globalization;
 using System.Windows;
+using System.Windows.Media;
 using Microsoft.Extensions.DependencyInjection;
 using PostgresBackup.Core.Models;
 using PostgresBackup.Wpf.ViewModels;
@@ -35,6 +37,16 @@ public static class UiCaptureService
             Directory.CreateDirectory(outputDir);
             await Task.Delay(1500);
 
+            var dpi = VisualTreeHelper.GetDpi(mainWindow);
+            await File.WriteAllTextAsync(
+                Path.Combine(outputDir, "capture-metadata.txt"),
+                string.Join(
+                    Environment.NewLine,
+                    $"DpiScaleX={dpi.DpiScaleX.ToString(CultureInfo.InvariantCulture)}",
+                    $"DpiScaleY={dpi.DpiScaleY.ToString(CultureInfo.InvariantCulture)}",
+                    $"PixelsPerInchX={dpi.PixelsPerInchX.ToString(CultureInfo.InvariantCulture)}",
+                    $"PixelsPerInchY={dpi.PixelsPerInchY.ToString(CultureInfo.InvariantCulture)}"));
+
             if (!string.IsNullOrWhiteSpace(customToolsDir))
             {
                 var settingsVm = services.GetRequiredService<SettingsViewModel>();
@@ -51,11 +63,12 @@ public static class UiCaptureService
 
             var sizes = new (string Name, int Width, int Height)[]
             {
+                ("large_1600x900", 1600, 900),
                 ("default_960x600", 960, 600),
                 ("min_720x480", 720, 480)
             };
 
-            var pages = new[] { "Settings", "Backup", "Restore", "History", "Log" };
+            var pages = new[] { "Settings", "Backup", "Restore", "History" };
 
             // 啟動當下的原始畫面：刻意不呼叫 SwitchToPage，使本管線涵蓋應用程式
             // 自身的啟動導覽路徑（歷史迴歸：啟動後內容區域空白）。
