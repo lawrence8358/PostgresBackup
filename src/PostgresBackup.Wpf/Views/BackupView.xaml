@@ -22,8 +22,33 @@
                            Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
             </StackPanel>
 
+            <!-- 作業狀態：保持在標題下方，長時間作業時不必捲到頁面底部才能確認狀態。 -->
+            <Border Background="White" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    CornerRadius="6" Padding="12,10" Margin="0,0,0,14">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0"
+                            Background="{Binding StatusKind, Converter={StaticResource OperationStatusToBrushConverter}}"
+                            CornerRadius="12" Padding="10,4" VerticalAlignment="Top">
+                        <TextBlock Text="{Binding StatusBadgeText}" Foreground="White"
+                                   FontSize="11" FontWeight="SemiBold"/>
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                        <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource PrimaryTextBrush}"
+                                   FontSize="12" TextWrapping="Wrap"/>
+                        <ProgressBar Height="4" Margin="0,8,0,0" IsIndeterminate="True"
+                                     Foreground="#1976D2"
+                                     Visibility="{Binding IsBackingUp, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
             <!-- ── 卡片 1: 備份參數設定 ── -->
-            <hc:Card Margin="0,0,0,14" Padding="0" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+            <hc:Card Margin="0,0,0,14" Padding="0" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                     IsEnabled="{Binding IsBackingUp, Converter={StaticResource InvertBoolConverter}}">
                 <StackPanel>
                     <Border Background="{DynamicResource PrimaryBrush}" CornerRadius="4,4,0,0" Padding="16,10">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">

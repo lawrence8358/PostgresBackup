@@ -26,18 +26,30 @@ public partial class LogViewModel : ObservableObject
         }
     }
 
-    public void AppendLog(string message)
+    public void AppendLog(string message, bool includeTimestamp = true)
     {
-        Application.Current?.Dispatcher.Invoke(() =>
+        void AppendOnUiThread()
         {
             if (_entries.Length > 0)
             {
                 _entries.AppendLine();
             }
-            _entries.Append($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}");
+            _entries.Append(includeTimestamp
+                ? $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}"
+                : message);
             _isCleared = false;
             OnPropertyChanged(nameof(LogContent));
-        });
+        }
+
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.CheckAccess())
+        {
+            AppendOnUiThread();
+        }
+        else
+        {
+            dispatcher.Invoke(AppendOnUiThread);
+        }
     }
 
     [RelayCommand]

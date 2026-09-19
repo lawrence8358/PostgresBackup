@@ -11,6 +11,11 @@ public class BackupServiceTests
         public ProcessResult ResultToReturn { get; set; } = new(0, "Export completed", string.Empty);
         public string? CapturedArguments { get; private set; }
         public string? CapturedPassword { get; private set; }
+        public string? CapturedClientEncoding { get; private set; }
+        public string? CapturedLocaleAll { get; private set; }
+        public string? CapturedLocaleMessages { get; private set; }
+        public string? CapturedLanguage { get; private set; }
+        public bool LanguageVariableRemoved { get; private set; }
         public bool CreateFileOnRun { get; set; } = true;
         public string? FilePathToCreate { get; set; }
 
@@ -26,6 +31,26 @@ public class BackupServiceTests
             if (environmentVariables != null && environmentVariables.TryGetValue("PGPASSWORD", out var pass))
             {
                 CapturedPassword = pass;
+            }
+            if (environmentVariables != null && environmentVariables.TryGetValue("PGCLIENTENCODING", out var encoding))
+            {
+                CapturedClientEncoding = encoding;
+            }
+            if (environmentVariables != null && environmentVariables.TryGetValue("LC_ALL", out var localeAll))
+            {
+                CapturedLocaleAll = localeAll;
+            }
+            if (environmentVariables != null && environmentVariables.TryGetValue("LC_MESSAGES", out var localeMessages))
+            {
+                CapturedLocaleMessages = localeMessages;
+            }
+            if (environmentVariables != null && environmentVariables.TryGetValue("LANG", out var language))
+            {
+                CapturedLanguage = language;
+            }
+            if (environmentVariables != null && environmentVariables.TryGetValue("LANGUAGE", out var removedLanguage))
+            {
+                LanguageVariableRemoved = removedLanguage is null;
             }
 
             onOutputLine?.Invoke("pg_dump: reading schemas");
@@ -96,6 +121,11 @@ public class BackupServiceTests
             Assert.True(result.FileSizeBytes > 0);
             Assert.Contains(logs, l => l.Contains("pg_dump: dumping contents"));
             Assert.Equal("mypassword", fakeRunner.CapturedPassword);
+            Assert.Equal("UTF8", fakeRunner.CapturedClientEncoding);
+            Assert.Equal("C", fakeRunner.CapturedLocaleAll);
+            Assert.Equal("C", fakeRunner.CapturedLocaleMessages);
+            Assert.Equal("C", fakeRunner.CapturedLanguage);
+            Assert.True(fakeRunner.LanguageVariableRemoved);
         }
         finally
         {

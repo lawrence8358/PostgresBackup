@@ -22,8 +22,33 @@
                            Foreground="{DynamicResource PrimaryTextBrush}" VerticalAlignment="Center"/>
             </StackPanel>
 
+            <!-- 作業狀態：快照與還原可能耗時，狀態固定顯示在頁面上方。 -->
+            <Border Background="White" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    CornerRadius="6" Padding="12,10" Margin="0,0,0,14">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0"
+                            Background="{Binding StatusKind, Converter={StaticResource OperationStatusToBrushConverter}}"
+                            CornerRadius="12" Padding="10,4" VerticalAlignment="Top">
+                        <TextBlock Text="{Binding StatusBadgeText}" Foreground="White"
+                                   FontSize="11" FontWeight="SemiBold"/>
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                        <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource PrimaryTextBrush}"
+                                   FontSize="12" TextWrapping="Wrap"/>
+                        <ProgressBar Height="4" Margin="0,8,0,0" IsIndeterminate="True"
+                                     Foreground="#1976D2"
+                                     Visibility="{Binding IsRestoring, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
             <!-- ── 卡片 1: 還原設定與參數 ── -->
-            <hc:Card Margin="0,0,0,14" Padding="0" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+            <hc:Card Margin="0,0,0,14" Padding="0" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                     IsEnabled="{Binding IsRestoring, Converter={StaticResource InvertBoolConverter}}">
                 <StackPanel>
                     <Border Background="{DynamicResource PrimaryBrush}" CornerRadius="4,4,0,0" Padding="16,10">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -149,7 +174,7 @@
                                 Style="{StaticResource ButtonPrimary}"
                                 Height="36" FontSize="14" FontWeight="SemiBold"
                                 Command="{Binding StartRestoreCommand}"
-                                IsEnabled="{Binding IsConfirmed}"/>
+                                IsEnabled="{Binding CanStartRestore}"/>
                     </StackPanel>
                 </StackPanel>
             </hc:Card>

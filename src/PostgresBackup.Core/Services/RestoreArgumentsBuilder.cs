@@ -32,7 +32,9 @@ public static class RestoreArgumentsBuilder
             switch (options.Mode)
             {
                 case RestoreMode.CleanAndRecreate:
-                    sb.Append(" --clean --create");
+                    // Restore into the selected target database. --create would use the
+                    // database name stored in the archive, which breaks cross-database restores.
+                    sb.Append(" --clean --if-exists");
                     break;
                 case RestoreMode.DataOnly:
                     sb.Append(" --data-only");

@@ -231,7 +231,7 @@ pgbackup profile remove --name "正式環境"
 | 參數 | 簡寫 | 說明 |
 |------|:---:|------|
 | `--file` | `-f` | **必填。** 來源備份檔案（`.dump` 或 `.sql`） |
-| `--mode` | `-m` | `normal`（預設）、`clean`（`--clean --create`）、`data`（`--data-only`） |
+| `--mode` | `-m` | `normal`（預設）、`clean`（`--clean --if-exists`）、`data`（`--data-only`） |
 | `--no-snapshot` | | 關閉還原前安全快照 |
 | `--yes` | `-y` | 自動同意高危險操作確認，不跳出互動提示 |
 | `--log` | | 額外將執行日誌附加寫入此檔案 |

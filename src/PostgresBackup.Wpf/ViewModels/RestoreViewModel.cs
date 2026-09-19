@@ -15,13 +15,19 @@ public partial class RestoreViewModel : ObservableObject
 {
     private readonly IRestoreService _restoreService;
     private readonly IConnectionProfileRepository _profileRepo;
+    private readonly SettingsViewModel? _settingsViewModel;
+    private readonly LogViewModel? _logViewModel;
 
     public RestoreViewModel(
         IRestoreService restoreService,
-        IConnectionProfileRepository profileRepo)
+        IConnectionProfileRepository profileRepo,
+        SettingsViewModel? settingsViewModel = null,
+        LogViewModel? logViewModel = null)
     {
         _restoreService = restoreService;
         _profileRepo = profileRepo;
+        _settingsViewModel = settingsViewModel;
+        _logViewModel = logViewModel;
 
         ResetStatusToIdle();
 
@@ -56,6 +62,9 @@ public partial class RestoreViewModel : ObservableObject
     private bool _isRestoring;
 
     [ObservableProperty]
+    private OperationStatusKind _statusKind = OperationStatusKind.Idle;
+
+    [ObservableProperty]
     private string _statusBadgeText = string.Empty;
 
     [ObservableProperty]
@@ -63,9 +72,12 @@ public partial class RestoreViewModel : ObservableObject
 
     private bool _isStatusIdle = true;
 
+    public bool CanStartRestore => IsConfirmed && !IsRestoring;
+
     private void ResetStatusToIdle()
     {
         _isStatusIdle = true;
+        StatusKind = OperationStatusKind.Idle;
         StatusBadgeText = LocalizationService.S("Status_Idle");
         StatusMessage = LocalizationService.S("Status_Idle_Message");
     }
@@ -121,6 +133,10 @@ public partial class RestoreViewModel : ObservableObject
             TargetDatabase = value.Database;
         }
     }
+
+    partial void OnIsConfirmedChanged(bool value) => OnPropertyChanged(nameof(CanStartRestore));
+
+    partial void OnIsRestoringChanged(bool value) => OnPropertyChanged(nameof(CanStartRestore));
 
     public void SetRestoreTarget(string filePath, string databaseName)
     {
@@ -185,6 +201,7 @@ public partial class RestoreViewModel : ObservableObject
 
         IsRestoring = true;
         _isStatusIdle = false;
+        StatusKind = OperationStatusKind.Running;
         StatusBadgeText = LocalizationService.S("Status_Restoring");
         StatusMessage = LocalizationService.S("Restore_Status_Running");
         AppendLog($"[{DateTime.Now:HH:mm:ss}] {LocalizationService.S("Restore_Log_Start")}");
@@ -204,7 +221,8 @@ public partial class RestoreViewModel : ObservableObject
                 TargetDatabase = targetDb,
                 Format = format,
                 Mode = Mode,
-                CreatePreRestoreSnapshot = CreatePreRestoreSnapshot
+                CreatePreRestoreSnapshot = CreatePreRestoreSnapshot,
+                ClientToolDirectory = _settingsViewModel?.CustomPath
             };
 
             var result = await _restoreService.RestoreAsync(
@@ -213,6 +231,7 @@ public partial class RestoreViewModel : ObservableObject
 
             if (result.IsSuccess)
             {
+                StatusKind = OperationStatusKind.Completed;
                 StatusBadgeText = LocalizationService.S("Status_Completed");
                 StatusMessage = LocalizationService.S("Restore_Status_Success");
                 if (result.SnapshotCreated)
@@ -223,12 +242,14 @@ public partial class RestoreViewModel : ObservableObject
             }
             else
             {
+                StatusKind = OperationStatusKind.Failed;
                 StatusBadgeText = LocalizationService.S("Status_Failed");
                 StatusMessage = LocalizationService.S("Restore_Status_Failed", result.ErrorMessage);
             }
         }
         catch (Exception ex)
         {
+            StatusKind = OperationStatusKind.Error;
             StatusBadgeText = LocalizationService.S("Status_Error");
             StatusMessage = LocalizationService.S("Common_UnexpectedError", ex.Message);
             AppendLog($"[ERROR] {ex.Message}");
@@ -241,11 +262,22 @@ public partial class RestoreViewModel : ObservableObject
 
     private void AppendLog(string line)
     {
-        Application.Current?.Dispatcher.Invoke(() =>
+        void AppendOnUiThread()
         {
             _terminalBuilder.AppendLine(line);
             TerminalOutput = _terminalBuilder.ToString();
-        });
+            _logViewModel?.AppendLog(line, includeTimestamp: false);
+        }
+
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.CheckAccess())
+        {
+            AppendOnUiThread();
+        }
+        else
+        {
+            dispatcher.Invoke(AppendOnUiThread);
+        }
     }
 
     [RelayCommand]

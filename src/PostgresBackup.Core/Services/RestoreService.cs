@@ -152,6 +152,13 @@ public class RestoreService : IRestoreService
         {
             envVars["PGPASSWORD"] = options.Connection.Password;
         }
+        // Keep client data encoding explicit and avoid localized Windows messages
+        // being emitted in a code page that the redirected process cannot decode.
+        envVars["PGCLIENTENCODING"] = "UTF8";
+        envVars["LC_ALL"] = "C";
+        envVars["LC_MESSAGES"] = "C";
+        envVars["LANG"] = "C";
+        envVars["LANGUAGE"] = null;
 
         var restoreProc = await _processRunner.RunAsync(
             toolExecutablePath,

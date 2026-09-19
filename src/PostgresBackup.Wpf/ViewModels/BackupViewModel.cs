@@ -15,13 +15,19 @@ public partial class BackupViewModel : ObservableObject
 {
     private readonly IBackupService _backupService;
     private readonly IConnectionProfileRepository _profileRepo;
+    private readonly SettingsViewModel? _settingsViewModel;
+    private readonly LogViewModel? _logViewModel;
 
     public BackupViewModel(
         IBackupService backupService,
-        IConnectionProfileRepository profileRepo)
+        IConnectionProfileRepository profileRepo,
+        SettingsViewModel? settingsViewModel = null,
+        LogViewModel? logViewModel = null)
     {
         _backupService = backupService;
         _profileRepo = profileRepo;
+        _settingsViewModel = settingsViewModel;
+        _logViewModel = logViewModel;
 
         var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         _outputDirectory = Path.Combine(docs, "PostgresBackups");
@@ -66,6 +72,9 @@ public partial class BackupViewModel : ObservableObject
     private bool _isBackingUp;
 
     [ObservableProperty]
+    private OperationStatusKind _statusKind = OperationStatusKind.Idle;
+
+    [ObservableProperty]
     private string _statusMessage = string.Empty;
 
     [ObservableProperty]
@@ -76,6 +85,7 @@ public partial class BackupViewModel : ObservableObject
     private void ResetStatusToIdle()
     {
         _isStatusIdle = true;
+        StatusKind = OperationStatusKind.Idle;
         StatusBadgeText = LocalizationService.S("Status_Idle");
         StatusMessage = LocalizationService.S("Status_Idle_Message");
     }
@@ -172,6 +182,7 @@ public partial class BackupViewModel : ObservableObject
 
         IsBackingUp = true;
         _isStatusIdle = false;
+        StatusKind = OperationStatusKind.Running;
         StatusBadgeText = LocalizationService.S("Status_Running");
         StatusMessage = LocalizationService.S("Backup_Status_Running");
         AppendLog($"[{DateTime.Now:HH:mm:ss}] {LocalizationService.S("Backup_Log_Start")}");
@@ -197,7 +208,8 @@ public partial class BackupViewModel : ObservableObject
                 Scope = Scope,
                 Schemas = schemaList,
                 Tables = tableList,
-                OutputDirectory = OutputDirectory
+                OutputDirectory = OutputDirectory,
+                ClientToolDirectory = _settingsViewModel?.CustomPath
             };
 
             var result = await _backupService.BackupAsync(
@@ -206,17 +218,20 @@ public partial class BackupViewModel : ObservableObject
 
             if (result.IsSuccess)
             {
+                StatusKind = OperationStatusKind.Completed;
                 StatusBadgeText = LocalizationService.S("Status_Completed");
                 StatusMessage = LocalizationService.S("Backup_Status_Success", Path.GetFileName(result.OutputFilePath));
             }
             else
             {
+                StatusKind = OperationStatusKind.Failed;
                 StatusBadgeText = LocalizationService.S("Status_Failed");
                 StatusMessage = LocalizationService.S("Backup_Status_Failed", result.ErrorMessage);
             }
         }
         catch (Exception ex)
         {
+            StatusKind = OperationStatusKind.Error;
             StatusBadgeText = LocalizationService.S("Status_Error");
             StatusMessage = LocalizationService.S("Common_UnexpectedError", ex.Message);
             AppendLog($"[ERROR] {ex.Message}");
@@ -230,11 +245,22 @@ public partial class BackupViewModel : ObservableObject
 
     private void AppendLog(string line)
     {
-        Application.Current?.Dispatcher.Invoke(() =>
+        void AppendOnUiThread()
         {
             _terminalBuilder.AppendLine(line);
             TerminalOutput = _terminalBuilder.ToString();
-        });
+            _logViewModel?.AppendLog(line, includeTimestamp: false);
+        }
+
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.CheckAccess())
+        {
+            AppendOnUiThread();
+        }
+        else
+        {
+            dispatcher.Invoke(AppendOnUiThread);
+        }
     }
 
     [RelayCommand]

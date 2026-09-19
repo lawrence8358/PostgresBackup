@@ -231,7 +231,7 @@ Generated file names follow `{database}_{yyyyMMddHHmmss}.dump`, or `.sql` for pl
 | Option | Alias | Description |
 |--------|-------|-------------|
 | `--file` | `-f` | **Required.** Source backup file (`.dump` or `.sql`) |
-| `--mode` | `-m` | `normal` (default), `clean` (`--clean --create`), or `data` (`--data-only`) |
+| `--mode` | `-m` | `normal` (default), `clean` (`--clean --if-exists`), or `data` (`--data-only`) |
 | `--no-snapshot` | | Disable the pre-restore safety snapshot |
 | `--yes` | `-y` | Skip the interactive destructive-operation confirmation |
 | `--log` | | Also append the run log to this file |

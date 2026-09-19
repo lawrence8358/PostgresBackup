@@ -87,6 +87,10 @@ public class ProcessRunner : IProcessRunner
             process.BeginErrorReadLine();
 
             await process.WaitForExitAsync(ct);
+            // WaitForExitAsync observes process termination, but the asynchronous
+            // redirected stream callbacks can still be queued. Drain them before
+            // returning so the final log lines reach the UI and CLI callers.
+            process.WaitForExit();
 
             return new ProcessResult(
                 process.ExitCode,

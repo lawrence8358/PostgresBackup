@@ -11,7 +11,7 @@ public enum RestoreMode
     Normal,
 
     /// <summary>
-    /// 清除並重建 (--clean --create, 覆寫模式)
+    /// 清除並重建目標資料庫中的物件（--clean --if-exists，不改用備份檔內的資料庫名稱）
     /// </summary>
     CleanAndRecreate,
 

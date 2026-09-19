@@ -275,7 +275,7 @@
     <value>Restore Mode</value>
   </data>
   <data name="Restore_Mode_Clean" xml:space="preserve">
-    <value>Clean &amp; Recreate (--clean --create)</value>
+    <value>Clean &amp; Recreate objects (--clean --if-exists)</value>
   </data>
   <data name="Restore_Mode_Normal" xml:space="preserve">
     <value>Normal Restore (Create missing objects)</value>

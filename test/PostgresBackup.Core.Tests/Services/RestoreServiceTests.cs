@@ -12,6 +12,7 @@ public class RestoreServiceTests
         public bool FailRestore { get; set; }
         public int CallCount { get; private set; }
         public List<string> ExecutablesCalled { get; } = [];
+        public List<IReadOnlyDictionary<string, string?>> CapturedEnvironmentVariables { get; } = [];
 
         public Task<ProcessResult> RunAsync(
             string executable,
@@ -23,6 +24,9 @@ public class RestoreServiceTests
         {
             CallCount++;
             ExecutablesCalled.Add(executable);
+            CapturedEnvironmentVariables.Add(
+                environmentVariables?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
+                ?? new Dictionary<string, string?>());
 
             // 判斷是否為快照 (pg_dump)
             if (executable.Contains("pg_dump", StringComparison.OrdinalIgnoreCase))
@@ -154,6 +158,15 @@ public class RestoreServiceTests
 
             Assert.True(result.IsSuccess);
             Assert.True(result.SnapshotCreated);
+            Assert.Equal(2, runner.CapturedEnvironmentVariables.Count);
+            Assert.All(runner.CapturedEnvironmentVariables, environment =>
+            {
+                Assert.Equal("UTF8", environment["PGCLIENTENCODING"]);
+                Assert.Equal("C", environment["LC_ALL"]);
+                Assert.Equal("C", environment["LC_MESSAGES"]);
+                Assert.Equal("C", environment["LANG"]);
+                Assert.Null(environment["LANGUAGE"]);
+            });
             Assert.Equal(2, runner.CallCount); // 呼叫了 pg_dump，接著呼叫 pg_restore
 
             var records = await historyRepo.GetRecordsAsync();

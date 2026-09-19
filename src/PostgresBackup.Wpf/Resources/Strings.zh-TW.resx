@@ -275,7 +275,7 @@
     <value>還原模式</value>
   </data>
   <data name="Restore_Mode_Clean" xml:space="preserve">
-    <value>清除並重建 (--clean --create, 覆寫模式)</value>
+    <value>清除並重建物件 (--clean --if-exists, 覆寫模式)</value>
   </data>
   <data name="Restore_Mode_Normal" xml:space="preserve">
     <value>一般還原 (僅建立遺漏物件)</value>

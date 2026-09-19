@@ -73,6 +73,13 @@ public class BackupService : IBackupService
         {
             envVars["PGPASSWORD"] = options.Connection.Password;
         }
+        // Keep dump data encoding explicit; diagnostic messages are forced to the C locale below.
+        envVars["PGCLIENTENCODING"] = "UTF8";
+        // Keep localized Windows messages from being emitted in an unknown code page.
+        envVars["LC_ALL"] = "C";
+        envVars["LC_MESSAGES"] = "C";
+        envVars["LANG"] = "C";
+        envVars["LANGUAGE"] = null;
 
         var processResult = await _processRunner.RunAsync(
             pgDumpPath,

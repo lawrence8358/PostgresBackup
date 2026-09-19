@@ -28,7 +28,8 @@ public class RestoreArgumentsBuilderTests
         Assert.Contains("-p 5432", args);
         Assert.Contains("-U \"postgres\"", args);
         Assert.Contains("-d \"target_db\"", args);
-        Assert.Contains("--clean --create", args);
+        Assert.Contains("--clean --if-exists", args);
+        Assert.DoesNotContain("--create", args);
         Assert.Contains("-v", args);
         Assert.Contains(@"""C:\backups\mybackup.dump""", args);
     }
