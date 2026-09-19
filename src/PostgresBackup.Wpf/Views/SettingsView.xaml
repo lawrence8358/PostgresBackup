@@ -217,6 +217,13 @@
 
                     <StackPanel Margin="16,10,16,12">
 
+                        <!-- 適用範圍提示：僅供本程式使用 -->
+                        <TextBlock Text="{l:Loc Settings_Connection_ScopeHint}"
+                                   TextWrapping="Wrap"
+                                   FontSize="11" FontStyle="Italic"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                   Margin="0,0,0,10"/>
+
                         <!-- 設定檔選取與切換工具列 -->
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>

@@ -22,6 +22,7 @@ No custom dump parser. No reinvented wire protocol. Just the official tools, dri
 - [WPF Desktop Application](#wpf-desktop-application)
 - [Scheduled Backups](#scheduled-backups)
 - [Where Data Is Stored](#where-data-is-stored)
+- [Security](#security)
 - [Building from Source](#building-from-source)
 - [Documentation](#documentation)
 - [License](#license)
@@ -36,7 +37,7 @@ PostgresBackup takes the other path:
 
 - **Official tools only:** every backup is a real `pg_dump` invocation; every restore is `pg_restore` or `psql`. The output files are ordinary PostgreSQL dumps, readable by any standard tooling.
 - **Safe by default:** a restore builds a defensive snapshot of the target database *first*. If the snapshot fails, the restore does not run.
-- **No plaintext credentials:** passwords live in Windows Credential Manager, and reach the child process through the `PGPASSWORD` environment variable — never on a command line a process monitor can read.
+- **No plaintext credentials at rest:** GUI connection profiles keep passwords in Windows Credential Manager; CLI connection profiles (`pgbackup profile set`) keep them in their own machine-scoped encrypted store, purpose-built for `SYSTEM`-run scheduled tasks. Passwords reach the child `pg_dump` / `pg_restore` process through the `PGPASSWORD` environment variable, never on its command line. See [Security](#security) for exactly who can read what.
 - **Auditable:** backups, restores and snapshots are all written to a local SQLite history you can search and act on.
 
 ## Features
@@ -48,7 +49,7 @@ PostgresBackup takes the other path:
 - **Pre-restore snapshot** — a defensive full backup taken before any destructive restore (on by default)
 - Typed-confirmation guard in the UI before a restore can be executed
 - Client tool auto-detection with client/server version compatibility checking
-- Connection profiles with passwords stored in Windows Credential Manager
+- Connection profiles for the GUI (Windows Credential Manager) and, independently, for the CLI and scheduled tasks (`pgbackup profile`, machine-scoped encryption)
 - Immutable SQLite audit history, searchable and filterable by operation type
 - Live streaming of the underlying tool's output in both the UI and the CLI
 - CLI (`pgbackup`) for Task Scheduler, CI/CD and automation
@@ -136,27 +137,32 @@ pgbackup check-tools --pg-bin-path "C:\Tools\pgsql\bin"
 ## CLI Usage
 
 ```bash
+# One-time setup: create a CLI connection profile for unattended use (interactive, masked password prompt)
+pgbackup profile set --name "prod" -H localhost -d my_database -u postgres
+
 # Diagnose the local tool installation
 pgbackup check-tools
 
-# Diagnose, and also verify client/server version compatibility
-pgbackup check-tools -H localhost -d my_database -u postgres -p "secret"
+# Diagnose, and also verify client/server version compatibility, using the saved profile
+pgbackup check-tools --profile "prod"
 
 # Full database backup, Custom format
-pgbackup backup -H localhost -d my_database -u postgres -p "secret" -f custom -o "D:\Backups"
+pgbackup backup --profile "prod" -f custom -o "D:\Backups"
 
 # Schema-only backup, as a readable .sql script
-pgbackup backup -H localhost -d my_database -u postgres -p "secret" -f plain -m schema -o "D:\Backups"
+pgbackup backup --profile "prod" -f plain -m schema -o "D:\Backups"
 
 # Back up two schemas only
-pgbackup backup -H localhost -d my_database -u postgres -p "secret" -n public -n hangfire -o "D:\Backups"
+pgbackup backup --profile "prod" -n public -n hangfire -o "D:\Backups"
 
 # Restore — takes a pre-restore snapshot automatically, prompts before overwriting
-pgbackup restore -f "D:\Backups\my_database_20260917235837.dump" -H localhost -d my_database -u postgres -p "secret"
+pgbackup restore -f "D:\Backups\my_database_20260917235837.dump" --profile "prod"
 
 # Restore unattended (for scripts): skip the prompt, keep the snapshot
-pgbackup restore -f "D:\Backups\my_database_20260917235837.dump" -H localhost -d my_database -u postgres -p "secret" --yes
+pgbackup restore -f "D:\Backups\my_database_20260917235837.dump" --profile "prod" --yes
 ```
+
+`-p "secret"` also works in place of `--profile` on `check-tools`, `backup` and `restore`, but it is for interactive, manual debugging only — see [Security](#security) for why. Never put `-p` in a script.
 
 ### Command Reference
 
@@ -165,20 +171,46 @@ pgbackup restore -f "D:\Backups\my_database_20260917235837.dump" -H localhost -d
 | `check-tools` | Report client tool paths, versions and readiness; optionally check server compatibility |
 | `backup` | Run a backup with `pg_dump` |
 | `restore` | Run a restore with `pg_restore` / `psql`, preceded by a safety snapshot |
+| `profile` | Manage CLI connection profiles used by `--profile` (independent from GUI connection profiles) |
 
-**Connection options** — accepted by all three commands:
+**Connection options** — accepted by `check-tools`, `backup` and `restore`:
 
 | Option | Alias | Description |
 |--------|-------|-------------|
-| `--profile` | | Use a saved connection profile, by name or id |
+| `--profile` | | Use a saved CLI connection profile, by name or id |
 | `--host` | `-H` | Server host |
 | `--port` | `-P` | Server port (default `5432`) |
 | `--database` | `-d` | Database name |
 | `--username` | `-u` | Username |
-| `--password` | `-p` | Password (handed to the child process via `PGPASSWORD`, never on its command line) |
+| `--password` | `-p` | Password. **Interactive debugging only** — it is visible on `pgbackup.exe`'s own process command line (e.g. via Task Manager or `Get-CimInstance Win32_Process`); the CLI prints a runtime warning when it is used. Never use it in a scheduled script — use `--profile` instead |
 | `--pg-bin-path` | | Directory containing the official client tools |
 
 Explicit options override the values taken from `--profile`.
+
+**`profile` — manage CLI connection profiles**
+
+| Subcommand | Description |
+|------------|-------------|
+| `set` | Create or update a profile (same `--name` updates it). Password is read via a masked interactive prompt, or piped in with `--password-stdin` — there is no flag to pass the password as an argument. Verifies the connection before saving unless `--force` is given (prints a warning when forced) |
+| `list` | List all CLI connection profiles, with password status (`set` / `missing`, never the password itself) and a warning if the store's file permissions look wrong |
+| `remove` | Delete a profile and wipe its encrypted password (`--name`) |
+
+```powershell
+# Masked interactive prompt
+pgbackup profile set --name "prod" -H localhost -P 5432 -d my_database -u postgres
+
+# Automation-friendly: pipe the password in over stdin, so it never appears on pgbackup's own command line.
+# Note that the LEFT side of the pipe matters just as much — a literal password there still lands in
+# your shell history. Read it from a permission-controlled file or an injected secret instead.
+Get-Content -Raw "C:\ProgramData\deploy-secrets\db.secret" | `
+    pgbackup profile set --name "prod" -H localhost -d my_database -u postgres --password-stdin
+
+# List profiles and check the store's permissions
+pgbackup profile list
+
+# Remove a profile
+pgbackup profile remove --name "prod"
+```
 
 **`backup` options**
 
@@ -210,7 +242,7 @@ Generated file names follow `{database}_{yyyyMMddHHmmss}.dump`, or `.sql` for pl
 
 | Option | Alias | Description |
 |--------|-------|-------------|
-| `--connection-string` | `-s` | Full connection string, used for the server compatibility check |
+| `--connection-string` | `-s` | Full connection string, used for the server compatibility check. **Interactive debugging only** — the same command-line exposure as `-p` applies; never use it in a scheduled script |
 | `--json` | | Emit the report as JSON, for scripted health checks |
 
 The CLI exits `0` on success and non-zero on failure, so it composes normally with scripts and CI steps.
@@ -219,7 +251,7 @@ The CLI exits `0` on success and non-zero on failure, so it composes normally wi
 
 Five pages, in the order you would use them:
 
-1. **Settings** — detect or point at the client tools, then create connection profiles. Passwords go to Windows Credential Manager; the profile file itself holds no secrets. "Test connection" also reports client/server version compatibility.
+1. **Settings** — detect or point at the client tools, then create connection profiles. Passwords go to Windows Credential Manager; the profile file itself holds no secrets. "Test connection" also reports client/server version compatibility. These GUI profiles are for this application only — scheduled tasks and the CLI use their own profiles, created with `pgbackup profile set` (see [Scheduled Backups](#scheduled-backups) and [Security](#security)).
 2. **Backup** — pick a profile, choose format / mode / scope, and watch the output file name preview update live. Execution streams straight to the log.
 3. **Restore** — pick a backup file and a target. The pre-restore snapshot is checked by default. The execute button stays locked until you retype the target database name and acknowledge the overwrite risk.
 4. **History** — every backup, restore and snapshot, filterable by type or database name, with "reveal in Explorer" and one-click "restore this file".
@@ -229,22 +261,38 @@ The language switcher (English / 繁體中文) at the bottom of the sidebar appl
 
 ## Scheduled Backups
 
-The CLI is built for unattended operation. A complete PowerShell scheduling script — retention policy, log rotation and `schtasks` registration — is in the [User Manual](docs/USER_MANUAL.md#5-cli-自動化排程備份實戰指南-sop). The short version:
+The CLI is built for unattended operation. Run this once, as an administrator, to create a CLI connection profile — no password ever needs to appear in a script:
+
+```powershell
+pgbackup profile set --name "prod" -H localhost -d my_database -u postgres
+```
+
+Register the task to run as `SYSTEM`, not a personal account — a personal account's password expiring (a common corporate policy) makes the task fail silently, while `SYSTEM` has no password to expire and can read the CLI connection profile store:
 
 ```powershell
 schtasks /Create /TN "PostgresBackup_Daily" /TR "powershell.exe -ExecutionPolicy Bypass -File C:\Scripts\backup_task.ps1" /SC DAILY /ST 02:00 /RU "SYSTEM" /F
 ```
 
+A complete PowerShell scheduling script — retention policy, log rotation and full `schtasks` registration walkthrough — is in the [User Manual, §5](docs/USER_MANUAL.md#5-cli-自動化排程備份實戰指南-sop).
+
 ## Where Data Is Stored
 
-| What | Location |
-|------|----------|
-| Connection profiles | `%APPDATA%\PostgresBackup\connections.json` |
-| Passwords | Windows Credential Manager |
-| Audit history | `%LOCALAPPDATA%\PostgresBackup\history.db` (SQLite) |
-| Default backup output | `%USERPROFILE%\Documents\PostgresBackups` |
+GUI connection profiles and CLI connection profiles are independent — a profile created in one is **not** visible to the other; this is intentional, not a bug.
 
-Both applications share all four, so a profile created in the UI is immediately usable from `pgbackup --profile`.
+| What | Location | Used by |
+|------|----------|---------|
+| GUI connection profiles | `%APPDATA%\PostgresBackup\connections.json` | WPF app only |
+| GUI connection profile passwords | Windows Credential Manager (per user) | WPF app only |
+| CLI connection profiles (`pgbackup profile`) | `%ProgramData%\PostgresBackup\cli-connection-profiles.json` | CLI and its scheduled tasks |
+| CLI connection profile passwords | `%ProgramData%\PostgresBackup\cli-credentials.dat` (machine-scoped encryption) | CLI and its scheduled tasks |
+| Audit history | `%LOCALAPPDATA%\PostgresBackup\history.db` (SQLite) | Per Windows account — see the note below |
+| Default backup output | `%USERPROFILE%\Documents\PostgresBackups` | Both |
+
+> **The audit history is per Windows account, not per machine.** `%LOCALAPPDATA%` resolves differently for every account, so a scheduled task running as `SYSTEM` writes its history to `C:\Windows\System32\config\systemprofile\AppData\Local\PostgresBackup\history.db`. Those runs will **not** appear on the GUI's History page, which reads the history of the account you are signed in as. The backup files themselves are unaffected — only the audit record lives somewhere else. Use the CLI's exit code and `--log-file` to monitor scheduled runs.
+
+## Security
+
+Passwords never sit in plaintext scripts or config files. GUI connection profiles hand passwords to Windows Credential Manager; CLI connection profiles encrypt them with Windows' machine-scoped Data Protection API, so the encrypted file only opens on the machine that created it, and only Administrators / `SYSTEM` can read the store on that machine — **including any local administrator, by design**: no local credential protection on Windows can be made to withstand someone who already has admin rights on the box, and this tool does not pretend otherwise. `-p` and `--connection-string` are kept for interactive debugging only and are never safe to put in a script. The full breakdown — who can read what, and exactly what is and isn't protected — is in the [User Manual, §6 Security Notes](docs/USER_MANUAL.md#6-安全性說明).
 
 ## Building from Source
 

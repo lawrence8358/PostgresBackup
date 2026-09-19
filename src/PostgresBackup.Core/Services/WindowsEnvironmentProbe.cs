@@ -1,7 +1,10 @@
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using Microsoft.Win32;
 using PostgresBackup.Core.Interfaces;
+using PostgresBackup.Core.Models;
 
 namespace PostgresBackup.Core.Services;
 
@@ -85,6 +88,67 @@ public class WindowsEnvironmentProbe : IEnvironmentProbe
             .OrderByDescending(r => r.Version)
             .Select(r => r.BinPath)
             .Distinct(StringComparer.OrdinalIgnoreCase);
+    }
+
+    public DirectoryAccessInfo? GetDirectoryAccessInfo(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return null;
+        }
+
+        if (!Directory.Exists(path))
+        {
+            return new DirectoryAccessInfo { Path = path, Exists = false };
+        }
+
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            return new DirectoryAccessInfo { Path = path, Exists = true };
+        }
+
+        return GetDirectoryAccessInfoInternal(path);
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static DirectoryAccessInfo? GetDirectoryAccessInfoInternal(string path)
+    {
+        try
+        {
+            var security = new DirectoryInfo(path).GetAccessControl(AccessControlSections.Access);
+            var rules = security.GetAccessRules(true, true, typeof(SecurityIdentifier));
+
+            var allowed = new List<string>();
+            foreach (FileSystemAccessRule rule in rules)
+            {
+                if (rule.AccessControlType != AccessControlType.Allow)
+                {
+                    continue;
+                }
+
+                var sid = rule.IdentityReference.Value;
+                if (!allowed.Contains(sid, StringComparer.OrdinalIgnoreCase))
+                {
+                    allowed.Add(sid);
+                }
+            }
+
+            return new DirectoryAccessInfo
+            {
+                Path = path,
+                Exists = true,
+                InheritanceEnabled = !security.AreAccessRulesProtected,
+                AllowedIdentities = allowed
+            };
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return null;
+        }
+        catch (PlatformNotSupportedException)
+        {
+            return null;
+        }
     }
 
     public IEnumerable<string> GetRegistryInstallations()

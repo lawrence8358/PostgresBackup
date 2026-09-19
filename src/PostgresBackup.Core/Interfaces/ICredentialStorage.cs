@@ -6,8 +6,11 @@ namespace PostgresBackup.Core.Interfaces;
 public interface ICredentialStorage
 {
     /// <summary>
-    /// 安全儲存指定識別鍵的密碼
+    /// 安全儲存指定識別鍵的密碼。
+    /// 儲存失敗時必須拋出 <see cref="Exceptions.CredentialStorageException"/>，
+    /// 不得以任何形式靜默保留明文密碼後回報成功。
     /// </summary>
+    /// <exception cref="Exceptions.CredentialStorageException">密碼無法寫入憑證存儲。</exception>
     void SetPassword(string key, string password);
 
     /// <summary>

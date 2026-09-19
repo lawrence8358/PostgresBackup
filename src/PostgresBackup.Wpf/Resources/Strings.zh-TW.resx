@@ -148,6 +148,9 @@
   <data name="Settings_Connection_Title" xml:space="preserve">
     <value>PostgreSQL 伺服器連線設定</value>
   </data>
+  <data name="Settings_Connection_ScopeHint" xml:space="preserve">
+    <value>此處設定僅供本程式使用。排程任務與命令列需要另外建立連線設定，請使用「pgbackup profile set」指令建立，詳見使用手冊「安全性說明」一節。</value>
+  </data>
   <data name="Settings_Host" xml:space="preserve">
     <value>主機位址</value>
   </data>
@@ -570,5 +573,14 @@
   </data>
   <data name="Settings_ServerVersion_Incompatible" xml:space="preserve">
     <value>伺服器版本: PostgreSQL {0}（需至少客戶端工具同版本）</value>
+  </data>
+  <data name="Settings_Profile_SaveFailedMessage" xml:space="preserve">
+    <value>儲存失敗，此連線設定並未儲存：{0}</value>
+  </data>
+  <data name="Profile_Store_LoadFailed" xml:space="preserve">
+    <value>無法讀取已儲存的連線設定：{0}</value>
+  </data>
+  <data name="Profile_Store_PasswordLoadFailed" xml:space="preserve">
+    <value>無法讀取這筆連線設定的密碼：{0}</value>
   </data>
 </root>

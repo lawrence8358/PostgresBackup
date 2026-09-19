@@ -3,6 +3,7 @@ using System.Globalization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PostgresBackup.Cli.Commands;
+using PostgresBackup.Cli.Services;
 using PostgresBackup.Core.Interfaces;
 using PostgresBackup.Core.Resources;
 using PostgresBackup.Core.Services;
@@ -23,6 +24,7 @@ public static class Program
         rootCommand.Add(CheckToolsCommand.Create(services));
         rootCommand.Add(BackupCommand.Create(services));
         rootCommand.Add(RestoreCommand.Create(services));
+        rootCommand.Add(ProfileCommand.Create(services));
 
         return await rootCommand.Parse(args).InvokeAsync(new InvocationConfiguration(), CancellationToken.None);
     }
@@ -40,8 +42,18 @@ public static class Program
         services.AddSingleton<IProcessRunner, ProcessRunner>();
         services.AddSingleton<IEnvironmentProbe, WindowsEnvironmentProbe>();
         services.AddSingleton<IToolDetectionService, ToolDetectionService>();
-        services.AddSingleton<ICredentialStorage, WindowsCredentialStorage>();
-        services.AddSingleton<IConnectionProfileRepository, JsonConnectionProfileRepository>();
+        // 命令列使用機器範圍存放區：以 SYSTEM 身分執行的排程任務才讀得到。
+        // 圖形介面維持使用者範圍實作，兩者在執行期完全看不到對方的資料。
+        // 位置與權限政策由單一物件提供，讓「檢查權限的目錄」與「實際寫入的目錄」
+        // 不可能脫鉤——存放區、憑證存放區與 profile 指令都取用同一個實例。
+        services.AddSingleton(MachineScopedStoreLocation.Default);
+        services.AddSingleton<ICredentialStorage>(sp =>
+            new MachineScopedCredentialStorage(sp.GetRequiredService<MachineScopedStoreLocation>()));
+        services.AddSingleton<IConnectionProfileRepository>(sp =>
+            new MachineScopedConnectionProfileRepository(
+                sp.GetRequiredService<ICredentialStorage>(),
+                sp.GetRequiredService<MachineScopedStoreLocation>()));
+        services.AddSingleton<IPasswordReader, ConsolePasswordReader>();
         services.AddSingleton<IBackupHistoryRepository, SqliteBackupHistoryRepository>();
         services.AddSingleton<IBackupService, BackupService>();
         services.AddSingleton<IRestoreService, RestoreService>();

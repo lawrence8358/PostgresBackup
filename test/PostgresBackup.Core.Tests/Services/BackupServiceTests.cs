@@ -52,6 +52,9 @@ public class BackupServiceTests
         public Task<ToolDetectionResult> DetectAsync(string? customPath = null, CancellationToken ct = default) =>
             Task.FromResult(ResultToReturn);
 
+        public Task<ConnectionCheckResult> VerifyConnectionAsync(string connectionString, CancellationToken ct = default) =>
+            Task.FromResult(ConnectionCheckResult.Success("16.2", 16));
+
         public Task<VersionCheckResult> CheckCompatibilityAsync(ToolDetectionResult clientTools, string connectionString, CancellationToken ct = default) =>
             Task.FromResult(VersionCheckResult.Compatible(clientTools.Version!, 16));
 

@@ -148,6 +148,9 @@
   <data name="Settings_Connection_Title" xml:space="preserve">
     <value>PostgreSQL Connection Settings</value>
   </data>
+  <data name="Settings_Connection_ScopeHint" xml:space="preserve">
+    <value>These settings are used by this app only. Scheduled tasks and the command line need their own connection profile, created with "pgbackup profile set" — see the "Security Notes" section of the user manual for details.</value>
+  </data>
   <data name="Settings_Host" xml:space="preserve">
     <value>Host</value>
   </data>
@@ -570,5 +573,14 @@
   </data>
   <data name="Settings_ServerVersion_Incompatible" xml:space="preserve">
     <value>Server version: PostgreSQL {0} (client tools must be at least this version)</value>
+  </data>
+  <data name="Settings_Profile_SaveFailedMessage" xml:space="preserve">
+    <value>Save failed. The connection profile was not saved: {0}</value>
+  </data>
+  <data name="Profile_Store_LoadFailed" xml:space="preserve">
+    <value>Could not read the saved connection profiles: {0}</value>
+  </data>
+  <data name="Profile_Store_PasswordLoadFailed" xml:space="preserve">
+    <value>Could not read the saved password for this connection profile: {0}</value>
   </data>
 </root>

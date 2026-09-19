@@ -10,6 +10,11 @@ public static class CheckToolsCommand
 {
     public static Command Create(IServiceProvider services)
     {
+        var profileOption = new Option<string?>("--profile")
+        {
+            Description = "指定已儲存之連線設定檔名稱或識別碼"
+        };
+
         var binPathOption = new Option<string?>("--pg-bin-path")
         {
             Description = "指定 pg_dump / pg_restore 所在之自訂目錄"
@@ -42,7 +47,7 @@ public static class CheckToolsCommand
 
         var connStringOption = new Option<string?>("--connection-string", "-s")
         {
-            Description = "完整 PostgreSQL 連線字串（覆蓋其他個別連線參數）"
+            Description = "完整 PostgreSQL 連線字串（覆蓋其他個別連線參數）。僅供互動式除錯使用，不得用於排程腳本。"
         };
 
         var jsonOption = new Option<bool>("--json")
@@ -51,6 +56,7 @@ public static class CheckToolsCommand
         };
 
         var command = new Command("check-tools", "檢查 PostgreSQL 官方客戶端工具 (pg_dump / pg_restore) 狀態與相容性");
+        command.Add(profileOption);
         command.Add(binPathOption);
         command.Add(hostOption);
         command.Add(portOption);
@@ -62,6 +68,7 @@ public static class CheckToolsCommand
 
         command.SetAction(async parseResult =>
         {
+            var profileName = parseResult.GetValue(profileOption);
             var binPath = parseResult.GetValue(binPathOption);
             var host = parseResult.GetValue(hostOption);
             var port = parseResult.GetValue(portOption);
@@ -71,11 +78,68 @@ public static class CheckToolsCommand
             var connStr = parseResult.GetValue(connStringOption);
             var asJson = parseResult.GetValue(jsonOption);
 
+            ConnectionSettings? profileConnSettings = null;
+            bool profileSpecified = !string.IsNullOrWhiteSpace(profileName);
+
+            if (profileSpecified)
+            {
+                var profileRepo = services.GetRequiredService<IConnectionProfileRepository>();
+
+                // 存取被拒與「找不到設定」是兩回事：此存放區只有系統管理員讀得到。
+                var profiles = await ProfileStoreAccess.TryLoadAllAsync(profileRepo);
+                if (profiles == null)
+                {
+                    return 1;
+                }
+
+                var matched = profiles.FirstOrDefault(p =>
+                    string.Equals(p.Id, profileName, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(p.Name, profileName, StringComparison.OrdinalIgnoreCase));
+
+                if (matched != null)
+                {
+                    var (passwordRead, profilePassword) =
+                        await ProfileStoreAccess.TryGetPasswordAsync(profileRepo, matched.Id);
+                    if (!passwordRead)
+                    {
+                        return 1;
+                    }
+
+                    // 密碼遺失時若靜默帶著 null 去連線，使用者只會看到驅動程式的
+                    // 驗證失敗訊息，看不出真正的原因是密碼不在存放區裡。
+                    ProfileStoreAccess.WarnIfPasswordMissing(matched.Name, profilePassword);
+
+                    profileConnSettings = new ConnectionSettings
+                    {
+                        Host = matched.Host,
+                        Port = matched.Port,
+                        Database = matched.Database,
+                        Username = matched.Username,
+                        Password = profilePassword
+                    };
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"[ERROR] 找不到名為 '{profileName}' 的連線設定檔，工具檢查已中止。");
+                    Console.ResetColor();
+                    return 1;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(password))
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("[WARNING] 使用 -p/--password 傳入密碼會暴露於行程資訊中（例如工作管理員、`Get-CimInstance Win32_Process` 或 PowerShell 歷史紀錄），建議改用命令列連線設定 (--profile)。");
+                Console.ResetColor();
+            }
+
             var detector = services.GetRequiredService<IToolDetectionService>();
             var detectionResult = await detector.DetectAsync(binPath);
 
             VersionCheckResult? versionCheck = null;
-            bool shouldCheckServer = !string.IsNullOrWhiteSpace(connStr) ||
+            bool shouldCheckServer = profileSpecified ||
+                                     !string.IsNullOrWhiteSpace(connStr) ||
                                      !string.IsNullOrWhiteSpace(host) ||
                                      !string.IsNullOrWhiteSpace(database);
 
@@ -83,11 +147,11 @@ public static class CheckToolsCommand
             {
                 var connSettings = new ConnectionSettings
                 {
-                    Host = host ?? "localhost",
-                    Port = port ?? 5432,
-                    Database = database ?? "postgres",
-                    Username = username ?? "postgres",
-                    Password = password,
+                    Host = host ?? profileConnSettings?.Host ?? "localhost",
+                    Port = port ?? profileConnSettings?.Port ?? 5432,
+                    Database = database ?? profileConnSettings?.Database ?? "postgres",
+                    Username = username ?? profileConnSettings?.Username ?? "postgres",
+                    Password = password ?? profileConnSettings?.Password,
                     ConnectionString = connStr
                 };
 

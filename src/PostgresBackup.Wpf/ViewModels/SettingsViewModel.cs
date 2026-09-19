@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PostgresBackup.Core.Interfaces;
 using PostgresBackup.Core.Models;
+using PostgresBackup.Core.Services;
 using PostgresBackup.Wpf.Services;
 
 namespace PostgresBackup.Wpf.ViewModels;
@@ -117,7 +118,24 @@ public partial class SettingsViewModel : ObservableObject
     public async Task LoadProfilesAsync()
     {
         Profiles.Clear();
-        var list = await _profileRepo.GetAllProfilesAsync();
+
+        IReadOnlyList<ConnectionProfile> list;
+        try
+        {
+            list = await _profileRepo.GetAllProfilesAsync();
+        }
+        catch (Exception ex)
+        {
+        // 存放區讀不到時不得讓例外逸出：這條路徑由啟動流程觸發，
+        // 逸出的例外會變成整個視窗開不起來，而使用者得到的訊息會是
+        // 「應用程式當掉了」而不是「這份設定讀不到，原因是……」。
+            // NewProfile 會清空狀態訊息，因此必須先讓表單回到乾淨狀態，再說明原因。
+            NewProfile();
+            ConnectionStatusMessage = LocalizationService.S("Profile_Store_LoadFailed", ex.Message);
+            IsConnectionSuccessful = false;
+            return;
+        }
+
         foreach (var p in list)
         {
             Profiles.Add(p);
@@ -149,7 +167,18 @@ public partial class SettingsViewModel : ObservableObject
 
     private async Task LoadProfilePasswordAsync(string profileId)
     {
-        Password = await _profileRepo.GetPasswordAsync(profileId) ?? string.Empty;
+        // 以 _ = 的形式被呼叫，因此這裡逸出的例外不會有人觀察到，
+        // 使用者只會看到密碼欄莫名其妙是空的。讀不到就說出來。
+        try
+        {
+            Password = await _profileRepo.GetPasswordAsync(profileId) ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            Password = string.Empty;
+            ConnectionStatusMessage = LocalizationService.S("Profile_Store_PasswordLoadFailed", ex.Message);
+            IsConnectionSuccessful = false;
+        }
     }
 
     [RelayCommand]
@@ -180,7 +209,17 @@ public partial class SettingsViewModel : ObservableObject
         profile.Username = Username;
         profile.LastUsedAt = DateTimeOffset.UtcNow;
 
-        await _profileRepo.SaveProfileAsync(profile, Password);
+        try
+        {
+            await _profileRepo.SaveProfileAsync(profile, Password);
+        }
+        catch (Exception ex)
+        {
+            // 密碼無法安全儲存時必須立即明示失敗，不得讓使用者誤以為已儲存成功。
+            ConnectionStatusMessage = LocalizationService.S("Settings_Profile_SaveFailedMessage", ex.Message);
+            IsConnectionSuccessful = false;
+            return;
+        }
 
         await LoadProfilesAsync();
         SelectedProfile = Profiles.FirstOrDefault(p => p.Id == profile.Id);
@@ -324,7 +363,8 @@ public partial class SettingsViewModel : ObservableObject
             else
             {
                 IsConnectionSuccessful = false;
-                ConnectionStatusMessage = checkResult.Message;
+                // 失敗訊息可能來自資料庫驅動程式，連線字串格式異常時有可能夾帶其內容。
+                ConnectionStatusMessage = SensitiveText.Redact(checkResult.Message, connSettings.Password);
                 if (checkResult.ServerMajorVersion != null)
                 {
                     ServerVersionDisplay = LocalizationService.S(
@@ -335,7 +375,8 @@ public partial class SettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             IsConnectionSuccessful = false;
-            ConnectionStatusMessage = LocalizationService.S("Settings_Connection_TestFailed", ex.Message);
+            ConnectionStatusMessage = LocalizationService.S(
+                "Settings_Connection_TestFailed", SensitiveText.Redact(ex.Message, Password));
         }
         finally
         {

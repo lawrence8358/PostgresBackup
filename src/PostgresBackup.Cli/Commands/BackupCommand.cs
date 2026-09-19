@@ -122,25 +122,49 @@ public static class BackupCommand
             // 若有指定 Profile，先讀取 Profile
             if (!string.IsNullOrWhiteSpace(profileName))
             {
-                var profiles = await profileRepo.GetAllProfilesAsync();
+                // 存取被拒與「找不到設定」是兩回事：此存放區只有系統管理員讀得到，
+                // 折疊成後者會讓一般使用者去重建一份其實已經存在的設定。
+                var profiles = await ProfileStoreAccess.TryLoadAllAsync(profileRepo);
+                if (profiles == null)
+                {
+                    return 1;
+                }
+
                 var matched = profiles.FirstOrDefault(p =>
                     string.Equals(p.Id, profileName, StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(p.Name, profileName, StringComparison.OrdinalIgnoreCase));
 
                 if (matched != null)
                 {
+                    var (passwordRead, profilePassword) =
+                        await ProfileStoreAccess.TryGetPasswordAsync(profileRepo, matched.Id);
+                    if (!passwordRead)
+                    {
+                        return 1;
+                    }
+
+                    ProfileStoreAccess.WarnIfPasswordMissing(matched.Name, profilePassword);
+
                     connSettings.Host = matched.Host;
                     connSettings.Port = matched.Port;
                     connSettings.Database = matched.Database;
                     connSettings.Username = matched.Username;
-                    connSettings.Password = await profileRepo.GetPasswordAsync(matched.Id);
+                    connSettings.Password = profilePassword;
                 }
                 else
                 {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"[WARNING] 找不到名為 '{profileName}' 的連線設定檔，將改用命令列傳入之參數。");
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"[ERROR] 找不到名為 '{profileName}' 的連線設定檔，備份作業已中止。");
                     Console.ResetColor();
+                    return 1;
                 }
+            }
+
+            if (!string.IsNullOrWhiteSpace(password))
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("[WARNING] 使用 -p/--password 傳入密碼會暴露於行程資訊中（例如工作管理員、`Get-CimInstance Win32_Process` 或 PowerShell 歷史紀錄），建議改用命令列連線設定 (--profile)。");
+                Console.ResetColor();
             }
 
             // 命令列參數覆蓋

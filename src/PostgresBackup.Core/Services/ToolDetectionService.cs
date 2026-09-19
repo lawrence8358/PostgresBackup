@@ -89,16 +89,10 @@ public class ToolDetectionService : IToolDetectionService
         return ToolDetectionResult.CreateNotFound(CoreStrings.Get("ToolDetection_NotFound_Detail"));
     }
 
-    public async Task<VersionCheckResult> CheckCompatibilityAsync(
-        ToolDetectionResult clientTools,
+    public async Task<ConnectionCheckResult> VerifyConnectionAsync(
         string connectionString,
         CancellationToken ct = default)
     {
-        if (!clientTools.IsReady || clientTools.Version == null)
-        {
-            return VersionCheckResult.Failed(CoreStrings.Get("ToolDetection_Error_NotReady"));
-        }
-
         try
         {
             await using var connection = new NpgsqlConnection(connectionString);
@@ -130,13 +124,37 @@ public class ToolDetectionService : IToolDetectionService
                 }
             }
 
-            return CheckCompatibility(clientTools.Version, serverMajor, serverVersionStr);
+            return ConnectionCheckResult.Success(serverVersionStr, serverMajor);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while connecting to the database server to check its version.");
-            return VersionCheckResult.Failed(CoreStrings.Format("ToolDetection_Error_ServerCheckFailed", ex.Message));
+            // 刻意只記錄例外型別，不記錄訊息或堆疊。連線字串含密碼，
+            // 驅動程式的例外訊息在連線字串格式異常時有可能回吐其內容，
+            // 而記錄器這條路徑繞得過呼叫端的遮蔽處理。
+            // 失敗原因仍由回傳值帶給呼叫端，由呼叫端遮蔽後呈現。
+            _logger.LogDebug("Failed to connect to the database server: {ExceptionType}", ex.GetType().Name);
+            return ConnectionCheckResult.Failure(ex.Message);
         }
+    }
+
+    public async Task<VersionCheckResult> CheckCompatibilityAsync(
+        ToolDetectionResult clientTools,
+        string connectionString,
+        CancellationToken ct = default)
+    {
+        if (!clientTools.IsReady || clientTools.Version == null)
+        {
+            return VersionCheckResult.Failed(CoreStrings.Get("ToolDetection_Error_NotReady"));
+        }
+
+        var probe = await VerifyConnectionAsync(connectionString, ct);
+        if (!probe.IsSuccess)
+        {
+            return VersionCheckResult.Failed(
+                CoreStrings.Format("ToolDetection_Error_ServerCheckFailed", probe.Message));
+        }
+
+        return CheckCompatibility(clientTools.Version, probe.ServerMajorVersion ?? 0, probe.ServerVersionString);
     }
 
     public VersionCheckResult CheckCompatibility(

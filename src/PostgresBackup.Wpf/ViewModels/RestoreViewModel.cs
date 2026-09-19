@@ -84,7 +84,21 @@ public partial class RestoreViewModel : ObservableObject
     public async Task RefreshProfilesAsync()
     {
         Profiles.Clear();
-        var list = await _profileRepo.GetAllProfilesAsync();
+
+        IReadOnlyList<ConnectionProfile> list;
+        try
+        {
+            list = await _profileRepo.GetAllProfilesAsync();
+        }
+        catch (Exception ex)
+        {
+        // 存放區讀不到時不得讓例外逸出：這條路徑由啟動流程觸發，
+        // 逸出的例外會變成整個視窗開不起來，而使用者得到的訊息會是
+        // 「應用程式當掉了」而不是「這份設定讀不到，原因是……」。
+            StatusMessage = LocalizationService.S("Profile_Store_LoadFailed", ex.Message);
+            return;
+        }
+
         foreach (var p in list)
         {
             Profiles.Add(p);

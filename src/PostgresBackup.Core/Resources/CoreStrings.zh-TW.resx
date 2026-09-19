@@ -181,4 +181,28 @@
   <data name="ToolDetection_Error_ServerCheckFailed" xml:space="preserve">
     <value>連線資料庫驗證伺服器版本失敗: {0}</value>
   </data>
+  <data name="CredentialStorage_Error_WriteFailed" xml:space="preserve">
+    <value>無法將密碼寫入 Windows 認證管理員（Win32 錯誤碼：{0}）。密碼並未儲存。</value>
+  </data>
+  <data name="CredentialStorage_Error_WriteFailedWithReason" xml:space="preserve">
+    <value>無法將密碼寫入 Windows 認證管理員：{0} 密碼並未儲存。</value>
+  </data>
+  <data name="MachineCredentialStorage_Error_WriteFailed" xml:space="preserve">
+    <value>無法將密碼寫入機器範圍加密存放區：{0} 密碼並未儲存。</value>
+  </data>
+  <data name="MachineCredentialStorage_Error_PlatformUnsupported" xml:space="preserve">
+    <value>目前平台不支援機器範圍加密（Windows 資料保護 API）。密碼並未儲存。</value>
+  </data>
+  <data name="MachineCredentialStorage_Error_AccessDenied" xml:space="preserve">
+    <value>無法讀取命令列連線設定存放區：權限不足（{0}）。請以系統管理員身分重新執行此指令。</value>
+  </data>
+  <data name="MachineCredentialStorage_Error_FileCorrupted" xml:space="preserve">
+    <value>加密密碼檔案已損毀而無法讀取（{0}）：{1} 其中的密碼已無法還原，請以 pgbackup profile set 重新建立受影響的連線設定。</value>
+  </data>
+  <data name="ProfileStore_Error_AccessDenied" xml:space="preserve">
+    <value>無法讀取命令列連線設定存放區：權限不足（{0}）。請以系統管理員身分重新執行此指令。</value>
+  </data>
+  <data name="ProfileStore_Error_FileCorrupted" xml:space="preserve">
+    <value>連線設定檔已損毀而無法讀取（{0}）：{1} 其內容已無法還原，請重新建立受影響的連線設定。</value>
+  </data>
 </root>

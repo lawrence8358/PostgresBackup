@@ -22,11 +22,13 @@
    - [4.1 工具狀態診斷 (`check-tools`)](#41-工具狀態診斷-check-tools)
    - [4.2 備份作業 (`backup`)](#42-備份作業-backup)
    - [4.3 還原作業 (`restore`)](#43-還原作業-restore)
+   - [4.4 命令列連線設定管理 (`profile`)](#44-命令列連線設定管理-profile)
 5. [CLI 自動化排程備份實戰指南 (SOP)](#5-cli-自動化排程備份實戰指南-sop)
    - [5.1 自動化備份腳本範例 (`backup_task.ps1`)](#51-自動化備份腳本範例-backup_taskps1)
-   - [5.2 註冊至 Windows 工作排程器 (Task Scheduler)](#52-註冊至-windows-工作排程器-task-scheduler)
+   - [5.2 以 SYSTEM 身分註冊至 Windows 工作排程器 (Task Scheduler)](#52-以-system-身分註冊至-windows-工作排程器-task-scheduler)
    - [5.3 驗證排程與日誌檢視](#53-驗證排程與日誌檢視)
-6. [常見問題排查 (FAQ)](#6-常見問題排查-faq)
+6. [安全性說明](#6-安全性說明)
+7. [常見問題排查 (FAQ)](#7-常見問題排查-faq)
 
 ---
 
@@ -39,7 +41,8 @@
   - **WPF GUI**：具備翡翠綠現代化介面、多國語系（繁體中文 / 英文），自適應視窗縮放與響應式排版。
   - **CLI 命令列 (`pgbackup`)**：可直接整合至 Windows Task Scheduler、CI/CD 與自動化營運排程。
 - **安全防護核心**：
-  - **密碼隔離**：透過內部處理序環境變數 `PGPASSWORD` 傳遞密碼，不暴露於命令列參數或處理序監視器。
+  - **兩套獨立的連線設定**：介面（WPF）與命令列（CLI）各自擁有一套連線設定，彼此完全獨立。介面連線設定的密碼交由 Windows Credential Manager 保管；命令列連線設定（`pgbackup profile`）的密碼則以「機器範圍加密」保管，讓以 `SYSTEM` 身分執行的排程任務也能安全讀取，腳本中不需要出現任何密碼。詳見[第 6 節：安全性說明](#6-安全性說明)。
+  - **`-p`／`--connection-string` 僅供手動除錯**：這兩個參數會讓密碼出現在 `pgbackup.exe` 自己的處理序命令列上，同機的其他使用者可透過工作管理員等工具讀取，因此只適合手動除錯，**不得**用於排程腳本；排程請一律改用 `--profile`。
   - **Pre-Restore Snapshot（前置快照）**：執行資料庫還原覆蓋前，系統強制先行建立防禦性全庫備份，預防人為操作失誤。
   - **破壞性操作防呆比對**：還原介面要求輸入目標資料庫名稱雙重確認，方可解除執行鎖定。
   - **不可變稽核軌跡**：所有作業自動永久記錄至 SQLite 稽核資料庫 (`history.db`)。
@@ -203,23 +206,30 @@ pgbackup check-tools [選項]
 #### 核心參數表：
 | 參數 | 簡寫 | 說明 | 範例 |
 | :--- | :---: | :--- | :--- |
+| `--profile` | | 指定已儲存之命令列連線設定名稱或識別碼（見 [4.4 節](#44-命令列連線設定管理-profile)），提供連線資訊時會一併檢驗伺服器版本相容性 | `--profile "正式環境"` |
 | `--pg-bin-path` | | 官方工具 bin 目錄路徑 | `--pg-bin-path "C:\Tools\pgsql\bin"` |
 | `--host` | `-H` | PostgreSQL 主機位址（提供連線資訊時，會一併檢驗伺服器版本相容性） | `-H localhost` |
 | `--port` | `-P` | 連接埠 (預設 5432) | `-P 5432` |
 | `--database` | `-d` | 資料庫名稱 | `-d my_database` |
 | `--username` | `-u` | 資料庫使用者 | `-u postgres` |
-| `--password` | `-p` | 資料庫密碼 (安全環境變數傳遞) | `-p "YourPassword123!"` |
-| `--connection-string` | `-s` | 完整連線字串，用於伺服器版本相容性檢查 | `-s "Host=localhost;Database=db;..."` |
+| `--password` | `-p` | 資料庫密碼。**僅供手動除錯使用**：密碼會出現在 `pgbackup.exe` 自己的處理序命令列上，同機的其他使用者可用工作管理員等工具讀取；使用時 CLI 會印出執行時警告。排程腳本請改用 `--profile` | `-p "手動除錯用密碼"` |
+| `--connection-string` | `-s` | 完整連線字串，用於伺服器版本相容性檢查。**僅供互動式除錯使用，不得用於排程腳本**（同樣可能讓密碼暴露於處理序命令列或記錄中） | `-s "Host=localhost;Database=db;..."` |
 | `--json` | | 以 JSON 格式輸出診斷報告，便於腳本化健康檢查 | `--json` |
+
+明確指定的連線參數會覆寫 `--profile` 帶入的值。
 
 #### 常用範例：
 1. **僅檢查本機工具是否就緒**：
    ```powershell
    pgbackup check-tools --pg-bin-path "C:\Tools\pgsql\bin"
    ```
-2. **同時檢驗客戶端與伺服器版本相容性**：
+2. **使用命令列連線設定檢驗客戶端與伺服器版本相容性（推薦，腳本中不含密碼）**：
    ```powershell
-   pgbackup check-tools -H localhost -d my_database -u postgres -p "YourPassword123!" --pg-bin-path "C:\Tools\pgsql\bin"
+   pgbackup check-tools --profile "正式環境" --pg-bin-path "C:\Tools\pgsql\bin"
+   ```
+3. **手動除錯時以 `-p` 直接帶入密碼（僅限互動操作，不建議寫入腳本）**：
+   ```powershell
+   pgbackup check-tools -H localhost -d my_database -u postgres -p "手動除錯用密碼" --pg-bin-path "C:\Tools\pgsql\bin"
    ```
 
 > 命令成功時回傳結束代碼 `0`，工具未就緒或版本不相容時回傳非零值，可直接用於排程腳本與 CI 流程的前置檢查。
@@ -236,7 +246,7 @@ pgbackup backup [選項]
 | `--port` | `-P` | 連接埠 (預設 5432) | `-P 5432` |
 | `--database` | `-d` | 目標資料庫名稱 | `-d my_database` |
 | `--username` | `-u` | 資料庫使用者 | `-u postgres` |
-| `--password` | `-p` | 資料庫密碼 (安全環境變數傳遞) | `-p "YourPassword123!"` |
+| `--password` | `-p` | 資料庫密碼。**僅供手動除錯使用**：密碼會出現在 `pgbackup.exe` 自己的處理序命令列上，同機的其他使用者可用工作管理員等工具讀取；使用時 CLI 會印出執行時警告。**排程腳本一律改用 `--profile`**，腳本中不應出現任何密碼 | `-p "手動除錯用密碼"` |
 | `--format` | `-f` | 備份格式 (`custom` 或 `plain`) | `-f custom` |
 | `--mode` | `-m` | 模式 (`all`, `schema`, `data`) | `-m all` |
 | `--schema` | `-n` | 指定綱要 (可重複使用) | `-n public -n hangfire` |
@@ -246,14 +256,20 @@ pgbackup backup [選項]
 | `--pg-bin-path` | | 官方工具 bin 目錄路徑 | `--pg-bin-path "C:\Tools\pgsql\bin"` |
 | `--log` | | 額外輸出詳細日誌檔路徑 | `--log "D:\Backups\run.log"` |
 
+若指定了不存在的 `--profile` 名稱，`backup` 會立即以非零結束代碼中止，不會略過連線資訊繼續嘗試執行。
+
 #### 常用範例：
-1. **完整資料庫自訂二進位備份 (最常用)**：
+1. **使用命令列連線設定執行完整資料庫自訂二進位備份（推薦，排程請用此法）**：
    ```powershell
-   pgbackup backup -H localhost -P 5432 -d my_database -u postgres -p "YourPassword123!" -f custom -o "D:\Backups" --pg-bin-path "C:\Tools\pgsql\bin"
+   pgbackup backup --profile "正式環境" -f custom -o "D:\Backups" --pg-bin-path "C:\Tools\pgsql\bin"
    ```
-2. **僅傾印結構 (Schema-Only) 純文字 SQL 檔**：
+2. **手動除錯時以 `-p` 直接帶入密碼（僅限互動操作）**：
    ```powershell
-   pgbackup backup -H localhost -d my_database -u postgres -p "YourPassword123!" -f plain -m schema -o "D:\Backups" --pg-bin-path "C:\Tools\pgsql\bin"
+   pgbackup backup -H localhost -P 5432 -d my_database -u postgres -p "手動除錯用密碼" -f custom -o "D:\Backups" --pg-bin-path "C:\Tools\pgsql\bin"
+   ```
+3. **僅傾印結構 (Schema-Only) 純文字 SQL 檔**：
+   ```powershell
+   pgbackup backup --profile "正式環境" -f plain -m schema -o "D:\Backups" --pg-bin-path "C:\Tools\pgsql\bin"
    ```
 
 ### 4.3 還原作業 (`restore`)
@@ -269,7 +285,7 @@ pgbackup restore [選項]
 | `--port` | `-P` | 連接埠 (預設 5432) | `-P 5432` |
 | `--database` | `-d` | 目標資料庫名稱 | `-d my_database` |
 | `--username` | `-u` | 資料庫使用者 | `-u postgres` |
-| `--password` | `-p` | 資料庫密碼 (安全環境變數傳遞) | `-p "YourPassword123!"` |
+| `--password` | `-p` | 資料庫密碼。**僅供手動除錯使用**：密碼會出現在 `pgbackup.exe` 自己的處理序命令列上，同機的其他使用者可用工作管理員等工具讀取；使用時 CLI 會印出執行時警告。**排程腳本一律改用 `--profile`**，腳本中不應出現任何密碼 | `-p "手動除錯用密碼"` |
 | `--mode` | `-m` | 還原模式 (`normal`, `clean`, `data`)，預設 `normal` | `-m clean` |
 | `--no-snapshot` | | **關閉**還原前安全快照（預設為自動啟用） | `--no-snapshot` |
 | `--yes` | `-y` | 自動同意高危險操作確認，不跳出互動提示 | `--yes` |
@@ -277,6 +293,8 @@ pgbackup restore [選項]
 | `--log` | | 額外輸出詳細日誌檔路徑 | `--log "D:\Backups\restore.log"` |
 
 > **注意**：還原前安全快照為**預設啟用**，無須額外加上任何參數；`--no-snapshot` 是用來「關閉」它的。關閉快照等同於放棄還原後的回復能力，除非目標資料庫可隨意丟棄，否則請勿使用。
+
+若指定了不存在的 `--profile` 名稱，`restore` 會立即以非零結束代碼中止，不會靜默略過連線資訊繼續執行。
 
 #### 還原模式說明：
 | 模式 | 對應官方參數 | 說明 |
@@ -286,24 +304,104 @@ pgbackup restore [選項]
 | `data` | `--data-only` | 僅寫入資料，不變更結構 |
 
 #### 常用範例：
-1. **執行安全還原 (自動建立前置快照，並於覆寫前互動確認)**：
+1. **使用命令列連線設定執行安全還原 (自動建立前置快照，並於覆寫前互動確認)**：
    ```powershell
-   pgbackup restore -f "D:\Backups\my_database_20260917.dump" -H localhost -d my_database -u postgres -p "YourPassword123!" --pg-bin-path "C:\Tools\pgsql\bin"
+   pgbackup restore -f "D:\Backups\my_database_20260917.dump" --profile "正式環境" --pg-bin-path "C:\Tools\pgsql\bin"
    ```
-2. **無人值守還原 (排程腳本用，略過互動確認但仍保留安全快照)**：
+2. **無人值守還原 (排程腳本用，略過互動確認但仍保留安全快照，腳本中不含任何密碼)**：
    ```powershell
-   pgbackup restore -f "D:\Backups\my_database_20260917.dump" -H localhost -d my_database -u postgres -p "YourPassword123!" --yes --pg-bin-path "C:\Tools\pgsql\bin"
+   pgbackup restore -f "D:\Backups\my_database_20260917.dump" --profile "正式環境" --yes --pg-bin-path "C:\Tools\pgsql\bin"
    ```
 3. **清除並重建模式還原 (完整覆寫目標資料庫)**：
    ```powershell
-   pgbackup restore -f "D:\Backups\my_database_20260917.dump" -H localhost -d my_database -u postgres -p "YourPassword123!" -m clean --yes --pg-bin-path "C:\Tools\pgsql\bin"
+   pgbackup restore -f "D:\Backups\my_database_20260917.dump" --profile "正式環境" -m clean --yes --pg-bin-path "C:\Tools\pgsql\bin"
    ```
+4. **手動除錯時以 `-p` 直接帶入密碼（僅限互動操作）**：
+   ```powershell
+   pgbackup restore -f "D:\Backups\my_database_20260917.dump" -H localhost -d my_database -u postgres -p "手動除錯用密碼" --pg-bin-path "C:\Tools\pgsql\bin"
+   ```
+
+### 4.4 命令列連線設定管理 (`profile`)
+
+`profile` 指令群組用來建立、列出與刪除**命令列連線設定**（供 `--profile` 使用）。這套設定與 WPF 介面「設定」分頁中建立的**介面連線設定**完全獨立、互不相通——在介面建立的設定不會出現在 `profile list` 中，反之亦然。命令列連線設定的密碼採用「機器範圍加密」保管，因此以 `SYSTEM` 身分執行的排程任務也能讀取；完整說明見[第 6 節：安全性說明](#6-安全性說明)。
+
+```powershell
+pgbackup profile [set|list|remove] [選項]
+```
+
+#### `profile set`：建立或更新一筆命令列連線設定
+
+| 參數 | 簡寫 | 說明 | 範例 |
+| :--- | :---: | :--- | :--- |
+| `--name` | | **必填。** 連線設定名稱；使用既有名稱即為更新該設定 | `--name "正式環境"` |
+| `--host` | `-H` | PostgreSQL 伺服器主機位址（預設 `localhost`） | `-H db.internal` |
+| `--port` | `-P` | PostgreSQL 伺服器連接埠（預設 `5432`） | `-P 5432` |
+| `--database` | `-d` | 資料庫名稱 | `-d my_database` |
+| `--username` | `-u` | 資料庫使用者名稱 | `-u postgres` |
+| `--password-stdin` | | 自標準輸入以管線方式提供密碼，供自動化部署使用；本身不接受任何密碼值 | `--password-stdin` |
+| `--force` | | 略過存檔前的連線驗證，直接儲存；僅在資料庫暫時無法連線時使用，儲存後會印出明顯警告 | `--force` |
+
+**刻意不提供**以命令列參數直接傳入密碼的選項——那會在修正密碼暴露問題的同時，重新製造同一個問題。密碼一律以下列兩種方式之一取得：
+
+- **互動式遮蔽輸入**（預設）：執行 `pgbackup profile set --name ...` 後，於畫面提示時輸入密碼，畫面上不會顯示任何字元。
+- **標準輸入管線**（`--password-stdin`）：供自動化部署腳本使用，密碼不會出現在 `pgbackup.exe` 自己的命令列上。
+  > **注意：** 這只保證密碼不會出現在 `pgbackup` 的命令列。密碼是從管線的**左邊**來的，所以左邊怎麼寫同樣要緊——如果你直接把密碼打成字面值（例如 `"我的密碼" | pgbackup ...`），它一樣會進入 PowerShell 的操作歷史紀錄與 `powershell.exe` 自己的命令列。請改從檔案或部署系統的機密注入取得，如下方範例。
+
+儲存前，系統會先以輸入的帳密**實際連線驗證一次**；驗證失敗即拒絕儲存，並提示可能的原因。只有在資料庫當下確實無法連線（例如尚未開通防火牆、伺服器維護中）時，才加上 `--force` 略過驗證先行建立設定——加上 `--force` 儲存後畫面會印出黃色警告，提醒這份設定尚未被證實可用，待資料庫恢復連線後應重新執行一次不加 `--force` 的指令確認。
+
+範例：
+
+```powershell
+# 以系統管理員身分開啟終端機，互動輸入密碼建立一筆設定
+pgbackup profile set --name "正式環境" -H localhost -P 5432 -d my_database -u postgres
+
+# 自動化部署：自權限受控的機密檔案讀入密碼，再以管線提供
+Get-Content -Raw "C:\ProgramData\deploy-secrets\db.secret" | `
+    pgbackup profile set --name "正式環境" -H localhost -d my_database -u postgres --password-stdin
+
+# 或由部署系統（CI／組態管理工具）注入的環境變數提供
+$env:DB_PASSWORD | pgbackup profile set --name "正式環境" -H localhost -d my_database -u postgres --password-stdin
+
+# 切勿這樣寫：密碼字面值會進入 PowerShell 歷史紀錄與處理序命令列
+# "MyS3cretPassword" | pgbackup profile set --name "正式環境" ... --password-stdin
+
+# 資料庫暫時無法連線時，先略過驗證建立設定
+pgbackup profile set --name "正式環境" -H localhost -d my_database -u postgres --force
+```
+
+#### `profile list`：列出目前所有命令列連線設定
+
+不需任何參數。輸出每筆設定的名稱、主機與連接埠、資料庫、使用者名稱、來源標示、建立時間，以及**密碼狀態**（「已設定」或「遺失」）——**只呈現有無，絕不呈現密碼內容或長度**。同時會檢查存放區的檔案權限是否仍限定於系統管理員與 `SYSTEM`；若權限被放寬，會印出警告。
+
+```powershell
+pgbackup profile list
+```
+
+#### `profile remove`：刪除一筆命令列連線設定
+
+| 參數 | 簡寫 | 說明 | 範例 |
+| :--- | :---: | :--- | :--- |
+| `--name` | | **必填。** 要刪除的命令列連線設定名稱 | `--name "正式環境"` |
+
+刪除時會一併清除其加密密碼，不留下孤兒憑證。
+
+```powershell
+pgbackup profile remove --name "正式環境"
+```
 
 ---
 
 ## 5. CLI 自動化排程備份實戰指南 (SOP)
 
-透過 Windows 工作排程器 (Task Scheduler) 搭配 PowerShell 腳本，可輕鬆實現每日自動備份、日誌輪替與舊檔自動清理。
+透過 Windows 工作排程器 (Task Scheduler) 搭配 PowerShell 腳本，可輕鬆實現每日自動備份、日誌輪替與舊檔自動清理——且腳本檔案中**完全不含任何資料庫密碼**，可以安全地放在共用位置，甚至簽入版控。
+
+在寫腳本之前，先以系統管理員身分執行一次（僅需一次，換密碼時重跑即可）：
+
+```powershell
+pgbackup profile set --name "正式環境" -H localhost -d my_database -u postgres
+```
+
+系統會提示遮蔽輸入密碼，並先實際連線驗證一次才儲存。之後排程腳本只需要寫 `--profile "正式環境"`。
 
 ### 5.1 自動化備份腳本範例 (`backup_task.ps1`)
 
@@ -315,14 +413,12 @@ pgbackup restore [選項]
  程式名稱: backup_task.ps1
  說明: PostgreSQL 自動排程備份腳本 (支援 Retention 政策與日誌寫入)
  執行環境: PowerShell 5.1+ / PowerShell 7+
+ 注意: 本腳本不含任何資料庫密碼。密碼由 `pgbackup profile set` 事先以
+       機器範圍加密存放，此腳本只透過 --profile 參照該筆設定。
 ================================================================================
 #>
 param(
-    [string]$HostName = "localhost",
-    [int]$Port = 5432,
-    [string]$Database = "my_database",
-    [string]$Username = "postgres",
-    [string]$Password = "YourPassword123!",
+    [string]$ProfileName = "正式環境",
     [string]$BackupDir = "D:\DatabaseBackups\my_database",
     [string]$PgBinPath = "C:\Tools\pgsql\bin",
     [string]$CliPath = "C:\Tools\PostgresBackup\pgbackup.exe",
@@ -350,16 +446,13 @@ function Log-Message([string]$msg) {
 }
 
 Log-Message "=== 開始執行 PostgreSQL 自動排程備份 ==="
-Log-Message "目標資料庫: $Database @ $HostName:$Port"
+Log-Message "使用命令列連線設定: $ProfileName"
 
-# 2. 呼叫 CLI 執行備份
+# 2. 呼叫 CLI 執行備份 — 腳本中不含任何密碼，密碼取自 --profile 所指的
+#    命令列連線設定（機器範圍加密存放區），SYSTEM 身分即可讀取
 try {
     & $CliPath backup `
-        -H $HostName `
-        -P $Port `
-        -d $Database `
-        -u $Username `
-        -p $Password `
+        --profile $ProfileName `
         -f custom `
         -m all `
         -o $BackupDir `
@@ -393,15 +486,25 @@ exit 0
 
 ---
 
-### 5.2 註冊至 Windows 工作排程器 (Task Scheduler)
+### 5.2 以 SYSTEM 身分註冊至 Windows 工作排程器 (Task Scheduler)
 
-本專案已實機測試驗證，建議使用 Windows 內建 `schtasks` 工具以系統管理員身分一鍵建立：
+#### 為什麼一定要以 `SYSTEM` 身分執行，不能用個人帳號？
+
+命令列連線設定是以「機器範圍加密」保管密碼，任何在**同一台機器上**執行的處理序都能解開它，不限於某個特定使用者帳號——`SYSTEM` 正是符合這個條件、且不需要密碼登入即可執行排程的內建身分。改用個人帳號執行排程，會多出兩個實際會發生的問題：
+
+- **密碼到期會讓任務「靜默停止」。** 多數組織的系統管理員帳號依規定每三個月要強制更換 Windows 登入密碼。工作排程器若設定以個人帳號執行，一旦該帳號密碼到期或更換，排程任務會開始失敗——但工作排程器本身通常不會用明顯的方式通知你，你很可能要等到「發現最近幾天都沒有新備份」才察覺，已經斷了一段時間。
+- **需要額外維護「儲存的認證」。** 以個人帳號執行的排程任務通常要求在工作排程器中儲存該帳號的登入密碼，這是另一份需要保護與更新的憑證，換密碼時還得同步更新兩個地方（Windows 登入密碼與工作排程器裡儲存的密碼）。
+
+以 `SYSTEM` 身分執行則完全沒有這兩個問題：`SYSTEM` 沒有「密碼」需要到期或更換，工作排程器也不需要儲存任何帳號密碼。這是本工具在使用者無法建立專用服務帳號的環境下，唯一不會隨時間推移而悄悄失效的做法。
 
 #### 🚀 一鍵註冊每日凌晨 02:00 自動備份任務：
+
+以**系統管理員身分**開啟 PowerShell 或命令提示字元，執行：
+
 ```powershell
 $scriptPath = "C:\Scripts\PostgresBackup\backup_task.ps1"
 
-# 註冊每日 02:00 執行之排程 (以 SYSTEM 帳戶於後台安靜執行)
+# 註冊每日 02:00 執行之排程 (以 SYSTEM 帳戶於後台安靜執行，無須任何人登入 Windows)
 schtasks /Create `
     /TN "PostgresBackup_Daily" `
     /TR "powershell.exe -ExecutionPolicy Bypass -File `"$scriptPath`"" `
@@ -415,7 +518,9 @@ schtasks /Create `
 - `/TN "PostgresBackup_Daily"`：排程任務名稱。
 - `/TR "powershell.exe ..."`：要觸發的命令（加上 `-ExecutionPolicy Bypass` 防止腳本被執行策略阻擋）。
 - `/SC DAILY /ST 02:00`：每日凌晨 2 點觸發。
-- `/RU "SYSTEM"`：以本機最高系統權限於背景執行（無論是否有使用者登入 Windows 均會穩定觸發）。
+- `/RU "SYSTEM"`：以 `SYSTEM` 身分於背景執行——不需要密碼、不會到期，無論是否有使用者登入 Windows 均會穩定觸發，也才能讀取以機器範圍加密存放的命令列連線設定。
+
+> **務必先以系統管理員身分執行過 `pgbackup profile set` 建立好連線設定，才註冊排程。** `SYSTEM` 讀不到 WPF 介面建立的介面連線設定——那套設定存放在使用者帳號範圍內。命令列連線設定存放於機器層級，任何在這台機器上以系統管理員權限執行 `pgbackup profile list` 的人都能看到同一份清單；註冊排程前，先確認清單中這筆設定的密碼狀態為「已設定」。
 
 ---
 
@@ -432,11 +537,13 @@ schtasks /Query /TN "PostgresBackup_Daily" /FO LIST
 schtasks /Run /TN "PostgresBackup_Daily"
 ```
 
+> **排程備份不會出現在圖形介面的「備份歷史」頁面。** 稽核歷史存放於 `%LOCALAPPDATA%\PostgresBackup\history.db`，而 `%LOCALAPPDATA%` 會隨 Windows 帳號解析到不同位置：以 `SYSTEM` 身分執行的排程任務，其歷史寫在 `C:\Windows\System32\config\systemprofile\AppData\Local\PostgresBackup\history.db`，圖形介面讀的則是你目前登入帳號的那一份。備份檔案本身不受影響，只有稽核紀錄落在別處。排程執行的結果請以下方的日誌檔與命令列退出碼來確認。
+
 #### 3. 檢查備份結果與日誌：
 進入備份輸出目錄（例如 `D:\DatabaseBackups\my_database\logs`），開啟當日日誌檢視輸出：
 ```text
 [2026-09-17 23:58:37] === 開始執行 PostgreSQL 自動排程備份 ===
-[2026-09-17 23:58:37] 目標資料庫: my_database @ localhost:5432
+[2026-09-17 23:58:37] 使用命令列連線設定: 正式環境
 [23:58:37] 啟動備份作業: 資料庫 'my_database'
 [23:58:37] 格式: Custom, 模式: SchemaAndData, 範圍: FullDatabase
 [23:58:40] [SUCCESS] 備份作業順利完成！
@@ -447,14 +554,76 @@ schtasks /Run /TN "PostgresBackup_Daily"
 
 ---
 
-## 6. 常見問題排查 (FAQ)
+## 6. 安全性說明
+
+這一節用一般人能懂的話，說清楚密碼放在哪裡、誰能看到、加密到底防住了什麼、又防不住什麼。如果你是資安稽核人員，或只是想在把這套工具用在正式環境前搞清楚風險，請讀完這一節。
+
+### 這套工具有「兩套」連線設定，彼此互不相通
+
+- **介面連線設定**：在 WPF 桌面應用程式的「設定」分頁裡建立的連線設定，只有這個桌面程式自己會用到。
+- **命令列連線設定**：用 `pgbackup profile set` 建立的連線設定，只有 `pgbackup.exe` 這個命令列工具、以及排程任務會用到。
+
+這兩套設定是刻意分開的：你在介面裡建立的設定，不會出現在 `pgbackup profile list` 裡；反過來也一樣。如果你的排程失敗，第一件要檢查的事就是「我是不是只在介面裡建立過設定，卻沒有用 `pgbackup profile set` 另外建一份」。
+
+### 密碼存放在哪裡、誰讀得到
+
+| | 介面連線設定 | 命令列連線設定 |
+|---|---|---|
+| 存放位置 | 你自己 Windows 帳號底下的資料夾與 Windows 認證管理員（Credential Manager） | 這台電腦共用的系統資料夾（不屬於任何一個使用者帳號） |
+| 誰讀得到 | 只有「你」這個 Windows 帳號登入後，這個桌面程式能讀到 | 這台電腦上以系統管理員身分執行的人，以及 `SYSTEM`（Windows 排程任務常用的內建身分） |
+| 適合用在 | 你自己手動操作、平常用滑鼠點的場景 | 不需要有人登入也要天天自動執行的排程備份 |
+
+之所以要分成兩套，是因為排程任務通常是以 `SYSTEM` 這個身分在背景執行的，而 `SYSTEM` 沒有辦法去讀某個特定使用者帳號底下的資料。所以命令列連線設定必須換一個「屬於整台電腦，而不是屬於某個人」的地方存放，`SYSTEM` 才讀得到。
+
+### 加密實際防住了什麼
+
+命令列連線設定裡的密碼，會先加密再存到磁碟上的檔案裡（檔名是 `cli-credentials.dat`，跟連線的其他資訊如主機、資料庫名稱分開存放）。這個加密有兩個特性：
+
+1. **加密結果跟這台電腦綁定。** 就算有人把這個檔案整份複製到另一台電腦上，在那台電腦上也**打不開**——加密與解密用的鑰匙不是存在檔案裡，而是跟這台電腦本身綁在一起。所以檔案被複製走、被備份工具意外收進雲端硬碟，並不等於密碼外洩。
+2. **這台電腦上的一般使用者打不開它。** 存放這份檔案的資料夾，建立時就設定成只有「系統管理員群組」與 `SYSTEM` 才有讀取權限，同一台電腦上的其他一般使用者帳號連檔案都打不開，更別說解密。
+
+### 存放區資料夾若已存在且權限不符，工具會拒絕儲存
+
+上面第 2 點的保護，完全建立在「存放資料夾的權限確實限定於系統管理員與 `SYSTEM`」這件事上。而 Windows 的機器層級共用資料夾預設允許一般使用者建立子資料夾——也就是說，一般使用者有可能**搶先建立**這個存放資料夾，讓它保留寬鬆的繼承權限，等系統管理員之後存入密碼時，密碼就落在一個同機任何人都讀得到的位置。
+
+因此 `pgbackup profile set` 在寫入任何資料**之前**會先檢查存放資料夾：
+
+- **資料夾還不存在**：由本工具建立，建立當下即套用限制性權限，然後才寫入。
+- **資料夾已存在且權限正確**：直接寫入。
+- **資料夾已存在但權限不符，或讀不到權限**：**拒絕儲存**，這次不會寫入任何資料。
+
+第三種情況之所以拒絕而不是自動把權限改回來，是因為在 Windows 上資料夾的建立者始終保有變更權限的能力：如果這個資料夾是被別人搶先建立的，我們就算把權限收緊，對方仍然可以事後再改回去——收緊之後就當作安全，是一個假的保證。
+
+遇到這種情況時，請以系統管理員身分確認該資料夾的來歷。若其中沒有你需要保留的連線設定，最乾淨的做法是直接刪除整個 `%ProgramData%\PostgresBackup` 資料夾，再重新執行一次 `pgbackup profile set`，由本工具重新建立。
+
+### 明確不防護的對象：系統管理員
+
+**任何人只要在這台電腦上取得系統管理員權限，就能解開命令列連線設定裡的密碼。** 這不是我們沒注意到的漏洞，而是刻意畫下的界線，理由很直接：在 Windows 上，不管用什麼方式把密碼「安全地」存在本機（不管是這裡用的加密方式，還是 Windows 認證管理員），系統管理員本來就有辦法解開——這是 Windows 本身的設計，不是這個工具能改變的事。真正能防住系統管理員的做法，需要額外的專用加密硬體或外部的雲端保管服務，這已經超出一套備份工具該負責的範圍，也不是大多數使用情境會需要的等級。
+
+換句話說：這套機制防的是「同一台電腦上，沒有系統管理員權限的其他人」，防不住「這台電腦的系統管理員」。如果你的威脅模型是要防住連你自己公司的系統管理員都不能信任的情境，這個工具不是為那種情境設計的。
+
+### `-p` 與 `--connection-string`：只適合手動除錯，不要寫進排程腳本
+
+CLI 的 `-p`（密碼）與 `-s` / `--connection-string`（完整連線字串）這兩個參數，會讓密碼出現在 `pgbackup.exe` 這個程式自己的啟動指令上。在同一台電腦上，任何人打開「工作管理員」看處理序詳細資料，或用 PowerShell 執行 `Get-CimInstance Win32_Process`，都能看到這個啟動指令、連同裡面的密碼。密碼也會留在 PowerShell 的操作歷史紀錄檔裡。
+
+這兩個參數之所以還留著，是因為手動在終端機打指令除錯時確實方便，而且拿掉它們算是破壞性變更，本身也是有正當用途的。CLI 使用 `-p` 時會印出一行執行時警告提醒這個風險。但**排程腳本永遠不應該使用這兩個參數**——排程一律改用 `--profile`，指向一筆用 `pgbackup profile set` 建立好的命令列連線設定，腳本檔案裡就完全不會出現密碼。
+
+### 一句話總結
+
+介面連線設定跟命令列連線設定各自存放、互不相通；命令列連線設定的密碼用跟這台電腦綁定的方式加密，並由存放資料夾的權限擋住同機的一般使用者（權限不符時工具寧可拒絕儲存也不會硬寫），但同機的系統管理員看得到——這一點是刻意接受的風險，不是疏漏；`-p` 跟 `--connection-string` 這兩個參數本身就會讓密碼露在外面，只能用來手動除錯，排程請一律用 `--profile`。
+
+---
+
+## 7. 常見問題排查 (FAQ)
 
 ### Q1: 出現 `pg_dump: error: server version: 18.6; pg_dump version: 16.x`
 - **原因**：PostgreSQL 官方規範要求客戶端 `pg_dump` 主版本不得低於資料庫伺服器版本。
 - **排除方式**：請依本手冊 [第 2 節](#2-postgresql-官方客戶端工具下載與安裝-sop) 下載 PostgreSQL 18.x 官方工具，並於設定中指定該 bin 目錄。
 
 ### Q2: 密碼中包含 `@`、`$` 等特殊字元是否會造成備份異常？
-- **解答**：不會。本系統嚴格遵守安全規範，密碼不直接串接於命令列字串中，而是透過處理序環境變數 `PGPASSWORD` 傳遞，因此支援任何高強度複雜密碼。
+- **解答**：不會，密碼本身支援任何高強度複雜字元。但兩種傳遞方式的暴露面不同，請分清楚：
+  - 使用 `--profile` 時，密碼取自命令列連線設定的加密存放區，完全不會出現在任何命令列或腳本裡，是排程應該用的方式。
+  - 使用 `-p` 直接在命令列帶入密碼時，密碼確實**會**出現在 `pgbackup.exe` 自己的啟動指令上（例如可被工作管理員或 `Get-CimInstance Win32_Process` 讀到）；只是接下來 PostgresBackup 呼叫 `pg_dump` / `pg_restore` 這些官方工具時，密碼不會再被串接進「它們的」命令列參數，而是透過子處理序的環境變數 `PGPASSWORD` 傳遞。也就是說 `-p` 對 `pgbackup.exe` 本身仍是暴露的，只是不會再往下一層擴散——這正是 `-p` 只適合手動除錯、不適合排程腳本的原因，詳見[第 6 節：安全性說明](#6-安全性說明)。
 
 ### Q3: 還原作業時提示「請確認受影響之目標資料庫名稱」無法點擊？
 - **原因**：此為破壞性覆寫防呆安全機制。

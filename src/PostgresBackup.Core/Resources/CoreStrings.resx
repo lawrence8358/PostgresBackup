@@ -181,4 +181,28 @@
   <data name="ToolDetection_Error_ServerCheckFailed" xml:space="preserve">
     <value>Could not connect to the database to verify the server version: {0}</value>
   </data>
+  <data name="CredentialStorage_Error_WriteFailed" xml:space="preserve">
+    <value>Could not save the password to Windows Credential Manager (Win32 error code: {0}). The password was NOT saved.</value>
+  </data>
+  <data name="CredentialStorage_Error_WriteFailedWithReason" xml:space="preserve">
+    <value>Could not save the password to Windows Credential Manager: {0} The password was NOT saved.</value>
+  </data>
+  <data name="MachineCredentialStorage_Error_WriteFailed" xml:space="preserve">
+    <value>Could not save the password to the machine-scoped encrypted store: {0} The password was NOT saved.</value>
+  </data>
+  <data name="MachineCredentialStorage_Error_PlatformUnsupported" xml:space="preserve">
+    <value>Machine-scoped encryption (Windows Data Protection API) is not available on this platform. The password was NOT saved.</value>
+  </data>
+  <data name="MachineCredentialStorage_Error_AccessDenied" xml:space="preserve">
+    <value>Could not read the command-line connection profile store: access is denied ({0}). Run the command again as an administrator.</value>
+  </data>
+  <data name="MachineCredentialStorage_Error_FileCorrupted" xml:space="preserve">
+    <value>The encrypted password file is damaged and cannot be read ({0}): {1} No password can be recovered from it; recreate the affected connection profiles with 'pgbackup profile set'.</value>
+  </data>
+  <data name="ProfileStore_Error_AccessDenied" xml:space="preserve">
+    <value>Could not read the command-line connection profile store: access is denied ({0}). Run the command again as an administrator.</value>
+  </data>
+  <data name="ProfileStore_Error_FileCorrupted" xml:space="preserve">
+    <value>The connection profile file is damaged and cannot be read ({0}): {1} Its contents cannot be recovered; recreate the affected connection profiles.</value>
+  </data>
 </root>
