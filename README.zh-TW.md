@@ -257,19 +257,29 @@ CLI 成功時回傳結束代碼 `0`，失敗時回傳非零值，可直接用於
 
 ## 排程備份
 
-CLI 專為無人值守環境設計。先以系統管理員身分執行一次，建立命令列連線設定——腳本中永遠不需要出現密碼：
+CLI 專為無人值守環境設計。`scripts/` 目錄裡有三支可以直接使用的腳本，都**不含任何資料庫密碼**：
+
+| 腳本 | 用途 | 需要管理員權限？ |
+| :--- | :--- | :---: |
+| [`scripts/register-backup-task.ps1`](scripts/register-backup-task.ps1) | 一次性設定：建立連線設定 → 註冊 SYSTEM 排程 → 立即試跑 | 是 |
+| [`scripts/backup_task.ps1`](scripts/backup_task.ps1) | 排程每天實際執行的備份（含保留政策與日誌輪替） | 由排程處理 |
+| [`scripts/check-backup-status.ps1`](scripts/check-backup-status.ps1) | 查看排程跑得好不好 | **否** |
+| [`scripts/unregister-backup-task.ps1`](scripts/unregister-backup-task.ps1) | 移除排程（預設只停排程，備份檔一律保留） | 是 |
 
 ```powershell
-pgbackup profile set --name "正式環境" -H localhost -d my_database -u postgres
+# 設定（以系統管理員身分，只做一次）
+cd scripts
+.\register-backup-task.ps1
+
+# 日後檢查（一般身分即可）
+.\check-backup-status.ps1 -BackupDir "D:\DatabaseBackups\my_database"
 ```
 
-排程請以 `SYSTEM` 身分註冊，不要用個人帳號：個人帳號的密碼到期（多數組織的例行政策）會讓排程任務靜默失敗，而 `SYSTEM` 沒有密碼會到期，且能讀取命令列連線設定存放區：
+排程一律以 `SYSTEM` 身分註冊，不要用個人帳號：個人帳號的密碼到期（多數組織的例行政策）會讓排程任務靜默失敗，而 `SYSTEM` 沒有密碼會到期，且能讀取命令列連線設定存放區。
 
-```powershell
-schtasks /Create /TN "PostgresBackup_Daily" /TR "powershell.exe -ExecutionPolicy Bypass -File C:\Scripts\backup_task.ps1" /SC DAILY /ST 02:00 /RU "SYSTEM" /F
-```
+**檢查備份結果不需要系統管理員權限**——需要提權的只有讀取連線設定存放區（`pgbackup profile list`），因為那裡面有密碼。
 
-完整的 PowerShell 排程腳本（含備份保留政策、日誌輪替，以及 `schtasks` 註冊的完整步驟）請見[使用者手冊第 5 節](docs/USER_MANUAL.md#5-cli-自動化排程備份實戰指南-sop)。
+各腳本的參數說明見 [`scripts/README.md`](scripts/README.md)，完整的排程 SOP 與檔案路徑一覽見[使用者手冊第 5 節](docs/USER_MANUAL.md#5-cli-自動化排程備份實戰指南-sop)。
 
 ## 資料儲存位置
 
@@ -284,7 +294,7 @@ schtasks /Create /TN "PostgresBackup_Daily" /TR "powershell.exe -ExecutionPolicy
 | 稽核歷史 | `%LOCALAPPDATA%\PostgresBackup\history.db`（SQLite） | 依 Windows 帳號各自獨立，詳見下方說明 |
 | 預設備份輸出目錄 | `%USERPROFILE%\Documents\PostgresBackups` | 兩者皆可 |
 
-> **稽核歷史是依 Windows 帳號各自獨立的，不是全機共用。** `%LOCALAPPDATA%` 會隨帳號解析到不同位置，因此以 `SYSTEM` 身分執行的排程任務，其歷史會寫到 `C:\Windows\System32\config\systemprofile\AppData\Local\PostgresBackup\history.db`。這些排程執行**不會**出現在圖形介面的「備份歷史」頁面——該頁面讀的是你目前登入帳號的歷史。備份檔案本身不受影響，只有稽核紀錄落在別處。若要監控排程執行結果，請改用命令列的退出碼與 `--log-file`。
+> **稽核歷史是依 Windows 帳號各自獨立的，不是全機共用。** `%LOCALAPPDATA%` 會隨帳號解析到不同位置，因此以 `SYSTEM` 身分執行的排程任務，其歷史會寫到 `C:\Windows\System32\config\systemprofile\AppData\Local\PostgresBackup\history.db`。這些排程執行**不會**出現在圖形介面的「備份歷史」頁面——該頁面讀的是你目前登入帳號的歷史。備份檔案本身不受影響，只有稽核紀錄落在別處。若要監控排程執行結果，請改用命令列的退出碼與 `--log`。
 
 ## 安全性說明
 

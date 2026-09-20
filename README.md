@@ -257,19 +257,29 @@ The language switcher (English / 繁體中文) at the bottom of the sidebar appl
 
 ## Scheduled Backups
 
-The CLI is built for unattended operation. Run this once, as an administrator, to create a CLI connection profile — no password ever needs to appear in a script:
+The CLI is built for unattended operation. The `scripts/` directory ships three ready-to-use scripts, none of which contain a database password:
+
+| Script | Purpose | Needs admin? |
+| :--- | :--- | :---: |
+| [`scripts/register-backup-task.ps1`](scripts/register-backup-task.ps1) | One-time setup: create the profile, register the SYSTEM task, run it once to verify | Yes |
+| [`scripts/backup_task.ps1`](scripts/backup_task.ps1) | What the task runs every day (retention policy and log rotation included) | Handled by the task |
+| [`scripts/check-backup-status.ps1`](scripts/check-backup-status.ps1) | Check how the scheduled backups are doing | **No** |
+| [`scripts/unregister-backup-task.ps1`](scripts/unregister-backup-task.ps1) | Remove the schedule (by default it stops the task and keeps every backup) | Yes |
 
 ```powershell
-pgbackup profile set --name "prod" -H localhost -d my_database -u postgres
+# Set up once, as an administrator
+cd scripts
+.\register-backup-task.ps1
+
+# Check any time, as yourself
+.\check-backup-status.ps1 -BackupDir "D:\DatabaseBackups\my_database"
 ```
 
-Register the task to run as `SYSTEM`, not a personal account — a personal account's password expiring (a common corporate policy) makes the task fail silently, while `SYSTEM` has no password to expire and can read the CLI connection profile store:
+The task always runs as `SYSTEM`, never a personal account — a personal account's password expiring (a common corporate policy) makes the task fail silently, while `SYSTEM` has no password to expire and can read the CLI connection profile store.
 
-```powershell
-schtasks /Create /TN "PostgresBackup_Daily" /TR "powershell.exe -ExecutionPolicy Bypass -File C:\Scripts\backup_task.ps1" /SC DAILY /ST 02:00 /RU "SYSTEM" /F
-```
+**Checking backup results does not require administrator rights.** Elevation is only needed to read the connection profile store (`pgbackup profile list`), because that is where the password lives.
 
-A complete PowerShell scheduling script — retention policy, log rotation and full `schtasks` registration walkthrough — is in the [User Manual, §5](docs/USER_MANUAL.md#5-cli-自動化排程備份實戰指南-sop).
+Per-script parameters are documented in [`scripts/README.md`](scripts/README.md); the full scheduling SOP and a map of every file and path it touches are in the [User Manual, §5](docs/USER_MANUAL.md#5-cli-自動化排程備份實戰指南-sop).
 
 ## Where Data Is Stored
 
@@ -284,7 +294,7 @@ GUI connection profiles and CLI connection profiles are independent — a profil
 | Audit history | `%LOCALAPPDATA%\PostgresBackup\history.db` (SQLite) | Per Windows account — see the note below |
 | Default backup output | `%USERPROFILE%\Documents\PostgresBackups` | Both |
 
-> **The audit history is per Windows account, not per machine.** `%LOCALAPPDATA%` resolves differently for every account, so a scheduled task running as `SYSTEM` writes its history to `C:\Windows\System32\config\systemprofile\AppData\Local\PostgresBackup\history.db`. Those runs will **not** appear on the GUI's History page, which reads the history of the account you are signed in as. The backup files themselves are unaffected — only the audit record lives somewhere else. Use the CLI's exit code and `--log-file` to monitor scheduled runs.
+> **The audit history is per Windows account, not per machine.** `%LOCALAPPDATA%` resolves differently for every account, so a scheduled task running as `SYSTEM` writes its history to `C:\Windows\System32\config\systemprofile\AppData\Local\PostgresBackup\history.db`. Those runs will **not** appear on the GUI's History page, which reads the history of the account you are signed in as. The backup files themselves are unaffected — only the audit record lives somewhere else. Use the CLI's exit code and `--log` to monitor scheduled runs.
 
 ## Security
 

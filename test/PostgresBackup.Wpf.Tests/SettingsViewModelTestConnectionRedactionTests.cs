@@ -12,7 +12,9 @@ namespace PostgresBackup.Wpf.Tests;
 /// </summary>
 public class SettingsViewModelTestConnectionRedactionTests
 {
-    private const string Password = "primeeagle20260912@";
+    // 刻意使用虛構值：這條斷言只需要「一個夠特別、不會誤中的字串」，
+    // 不需要任何真實密碼。測試檔案會進版控，真實密碼進了版控就再也拿不回來。
+    private const string Password = "n0t-a-real-p4ssw0rd@sentinel";
 
     private static SettingsViewModel CreateViewModel(Mock<IToolDetectionService> toolDetector)
     {

@@ -23,9 +23,11 @@
    - [4.3 還原作業 (`restore`)](#43-還原作業-restore)
    - [4.4 命令列連線設定管理 (`profile`)](#44-命令列連線設定管理-profile)
 5. [CLI 自動化排程備份實戰指南 (SOP)](#5-cli-自動化排程備份實戰指南-sop)
-   - [5.1 自動化備份腳本範例 (`backup_task.ps1`)](#51-自動化備份腳本範例-backup_taskps1)
+   - [5.1 現成腳本的位置與用途](#51-現成腳本的位置與用途)
    - [5.2 以 SYSTEM 身分註冊至 Windows 工作排程器 (Task Scheduler)](#52-以-system-身分註冊至-windows-工作排程器-task-scheduler)
    - [5.3 驗證排程與日誌檢視](#53-驗證排程與日誌檢視)
+   - [5.4 檔案與路徑一覽](#54-檔案與路徑一覽)
+   - [5.5 移除排程備份](#55-移除排程備份)
 6. [安全性說明](#6-安全性說明)
 7. [常見問題排查 (FAQ)](#7-常見問題排查-faq)
 
@@ -253,6 +255,8 @@ pgbackup backup [選項]
 
 若指定了不存在的 `--profile` 名稱，`backup` 會立即以非零結束代碼中止，不會略過連線資訊繼續嘗試執行。
 
+> **備份失敗時，輸出目錄會留下一個 0 位元組的空檔案。** 這是 `pg_dump` 的行為——它會先把輸出檔建起來，再去連資料庫；連線失敗（密碼錯誤、資料庫不存在等）時，那個空檔案就留在原地。工具會以非零結束代碼與錯誤訊息明確告知失敗，**請以結束代碼判斷成敗，不要以「目錄裡有沒有檔案」判斷**。排程腳本可在偵測到非零結束代碼後，順手清掉當次那個 0 位元組的檔案。
+
 #### 常用範例：
 1. **使用命令列連線設定執行完整資料庫自訂二進位備份（推薦，排程請用此法）**：
    ```powershell
@@ -290,6 +294,28 @@ pgbackup restore [選項]
 > **注意**：還原前安全快照為**預設啟用**，無須額外加上任何參數；`--no-snapshot` 是用來「關閉」它的。關閉快照等同於放棄還原後的回復能力，除非目標資料庫可隨意丟棄，否則請勿使用。
 
 若指定了不存在的 `--profile` 名稱，`restore` 會立即以非零結束代碼中止，不會靜默略過連線資訊繼續執行。
+
+#### 前置快照存放在哪裡？
+
+前置快照會寫到**來源備份檔所在目錄底下的 `snapshots` 子目錄**，檔名為 `{資料庫名稱}_snapshot_{yyyyMMddHHmmss}.dump`。例如以 `-f "D:\Backups\my_database_20260917.dump"` 還原時，快照會產生在：
+
+```text
+D:\Backups\snapshots\my_database_snapshot_20260920210217.dump
+```
+
+還原成功後畫面會印出快照的完整路徑。CLI 目前沒有參數可以改這個位置，因此請確認**備份檔所在的磁碟，還有足夠空間再放一份目標資料庫的完整備份**；若目標資料庫很大、而來源備份檔放在空間吃緊的磁碟上，請先把備份檔搬到空間充足的位置再還原。這些快照不會自動清除，請一併納入你的保留政策清理。
+
+#### 沒加 `-y` 時，在排程等非互動環境會「安全取消」
+
+未加 `-y` / `--yes` 時，`restore` 會要求你**手動輸入一次目標資料庫名稱**才肯往下走：
+
+```text
+[⚠️ 高危險操作警告]
+您即將對資料庫 'my_database' 執行還原作業，既有資料可能被覆蓋或刪除！
+若確定執行，請輸入目標資料庫名稱 'my_database':
+```
+
+在工作排程器、CI 這類沒有人在鍵盤前面的環境下，這個提示讀不到任何輸入，工具會印出「輸入不符，還原作業已安全取消」並以**非零結束代碼**結束，**完全不會動到資料庫**。這是刻意的防呆：無人值守的還原腳本必須明確加上 `-y`，等於要你親手寫下「我知道這會覆寫資料」。
 
 #### 還原模式說明：
 | 模式 | 對應官方參數 | 說明 |
@@ -398,88 +424,77 @@ pgbackup profile set --name "正式環境" -H localhost -d my_database -u postgr
 
 系統會提示遮蔽輸入密碼，並先實際連線驗證一次才儲存。之後排程腳本只需要寫 `--profile "正式環境"`。
 
-### 5.1 自動化備份腳本範例 (`backup_task.ps1`)
+> **命令列連線設定只記住「連哪一台資料庫、用什麼帳號密碼」，不記錄 `pg_dump` 放在哪裡。** 所以排程腳本除了 `--profile`，通常還是要帶上 `--pg-bin-path`——除非官方客戶端工具已經裝進系統 PATH（[第 2 節](#2-postgresql-官方客戶端工具下載與安裝-sop)的方法 B）。若你用的是免安裝可攜版（方法 A），`--pg-bin-path` 就是必要的，漏掉會得到「未偵測到 PostgreSQL 客戶端工具 (pg_dump)」而備份失敗。
 
-將以下腳本儲存至您的伺服器，例如 `C:\Scripts\PostgresBackup\backup_task.ps1`：
+> **工具目錄與 `pgbackup.exe` 都要放在 `SYSTEM` 讀得到的地方。** 排程任務以 `SYSTEM` 身分執行，它讀不到你個人帳號底下的資料夾（桌面、下載、`C:\Users\你的帳號\...`）。請把 `pgbackup.exe` 與 `pgsql\bin` 放在 `C:\Tools\`、`C:\Program Files\` 或某個資料碟的共用目錄下。
+
+### 5.1 現成腳本的位置與用途
+
+**你不需要自己寫腳本，也不需要從這份文件複製貼上。** 專案的 `scripts\` 目錄裡已經放好四支
+可以直接使用的 PowerShell 腳本：
+
+| 檔案 | 用途 | 誰執行、何時執行 | 需要管理員權限？ |
+| :--- | :--- | :--- | :---: |
+| `scripts\register-backup-task.ps1` | **一次性設定。** 建立連線設定 → 註冊 SYSTEM 排程 → 立即試跑驗證 | 你，只跑一次 | **是** |
+| `scripts\backup_task.ps1` | **每天實際執行的備份。** 備份、判斷成敗、依保留天數清理 | Windows 工作排程器，以 `SYSTEM` 身分自動執行 | 由排程處理 |
+| `scripts\check-backup-status.ps1` | **查看排程跑得好不好。** 排程狀態、上次退出碼、最近備份、日誌、磁碟空間 | 你，隨時 | **否** |
+| `scripts\unregister-backup-task.ps1` | **移除排程。** 預設只移除排程任務，備份檔與連線設定一律保留 | 你，要收掉的時候 | 是（`-DryRun` 不用） |
+
+四支腳本都**不含任何資料庫密碼**，可以安全地放在共用位置，也可以簽入版控。密碼由
+`pgbackup profile set` 事先以機器範圍加密存放，腳本只用 `--profile` 參照那筆設定。
+各腳本的完整參數表見 [`scripts/README.md`](../scripts/README.md)。
+
+#### 一般情況下你只需要做這兩件事
 
 ```powershell
-<#
-================================================================================
- 程式名稱: backup_task.ps1
- 說明: PostgreSQL 自動排程備份腳本 (支援 Retention 政策與日誌寫入)
- 執行環境: PowerShell 5.1+ / PowerShell 7+
- 注意: 本腳本不含任何資料庫密碼。密碼由 `pgbackup profile set` 事先以
-       機器範圍加密存放，此腳本只透過 --profile 參照該筆設定。
-================================================================================
-#>
-param(
-    [string]$ProfileName = "正式環境",
-    [string]$BackupDir = "D:\DatabaseBackups\my_database",
-    [string]$PgBinPath = "C:\Tools\pgsql\bin",
-    [string]$CliPath = "C:\Tools\PostgresBackup\pgbackup.exe",
-    [int]$RetentionDays = 7   # 備份保留天數 (超過自動清理)
-)
+# 1. 設定（以系統管理員身分，只做一次）
+cd <專案目錄>\scripts
+.\register-backup-task.ps1
 
-$ErrorActionPreference = "Stop"
-
-# 1. 確保輸出目錄與日誌目錄存在
-if (-not (Test-Path $BackupDir)) {
-    New-Item -ItemType Directory -Path $BackupDir -Force | Out-Null
-}
-$LogDir = Join-Path $BackupDir "logs"
-if (-not (Test-Path $LogDir)) {
-    New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
-}
-
-$Timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$LogFile = Join-Path $LogDir "backup_$Timestamp.log"
-
-function Log-Message([string]$msg) {
-    $formatted = "[$((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))] $msg"
-    Write-Output $formatted
-    Add-Content -Path $LogFile -Value $formatted -Encoding utf8
-}
-
-Log-Message "=== 開始執行 PostgreSQL 自動排程備份 ==="
-Log-Message "使用命令列連線設定: $ProfileName"
-
-# 2. 呼叫 CLI 執行備份 — 腳本中不含任何密碼，密碼取自 --profile 所指的
-#    命令列連線設定（機器範圍加密存放區），SYSTEM 身分即可讀取
-try {
-    & $CliPath backup `
-        --profile $ProfileName `
-        -f custom `
-        -m all `
-        -o $BackupDir `
-        --pg-bin-path $PgBinPath `
-        --log $LogFile
-
-    $ExitCode = $LASTEXITCODE
-    if ($ExitCode -ne 0) {
-        throw "CLI 回傳失敗代碼: $ExitCode"
-    }
-    Log-Message "備份作業成功完成！"
-}
-catch {
-    Log-Message "[ERROR] 備份程序發生異常: $_"
-    exit 1
-}
-
-# 3. 執行保留政策 (Retention Policy)：刪除超過 N 天的舊備份檔
-Log-Message "開始檢查並清理超過 $RetentionDays 天之舊備份檔案..."
-$CutoffDate = (Get-Date).AddDays(-$RetentionDays)
-$OldFiles = Get-ChildItem -Path $BackupDir -Include "*.dump", "*.sql" -File | Where-Object { $_.LastWriteTime -lt $CutoffDate }
-
-foreach ($file in $OldFiles) {
-    Log-Message "清除過期備份檔: $($file.Name) (建立時間: $($file.LastWriteTime))"
-    Remove-Item $file.FullName -Force
-}
-
-Log-Message "=== 排程作業圓滿結束 ==="
-exit 0
+# 2. 日後檢查（一般身分即可，隨時）
+.\check-backup-status.ps1 -BackupDir "D:\DatabaseBackups\my_database"
 ```
 
----
+第一支會逐項詢問（主機、資料庫、帳號、備份目錄…），密碼是遮蔽輸入，畫面上不會顯示任何字元。
+跑完會印出一份「這些東西放在哪裡」的總結，並立刻試跑一次確認整條路真的通。
+
+也可以把答案都用參數帶進去省掉互動：
+
+```powershell
+.\register-backup-task.ps1 `
+    -ProfileName "正式環境" `
+    -Database my_database -Username postgres `
+    -BackupDir "D:\DatabaseBackups\my_database" `
+    -PgBinPath "C:\Tools\pgsql\bin" `
+    -CliPath "C:\Tools\PostgresBackup\pgbackup.exe" `
+    -At 02:00 -RetentionDays 7 -SnapshotRetentionDays 30
+```
+
+**只有密碼永遠不能用參數傳**——那等於把密碼寫進 PowerShell 的操作歷史紀錄。
+
+#### `backup_task.ps1` 的保留政策
+
+三類檔案分開設定，因為它們的性質不同：
+
+| 參數 | 預設 | 管的是什麼 |
+| :--- | :---: | :--- |
+| `-RetentionDays` | `7` | 例行備份檔 |
+| `-SnapshotRetentionDays` | `30` | `snapshots\` 裡的還原前快照。留得比備份久，因為那是「還原前的救命繩」 |
+| `-LogRetentionDays` | `30` | `logs\` 裡的執行日誌 |
+
+任一項設為 `0` 表示該類不清理；加上 `-SkipCleanup` 則三類都不清理。
+
+**退出碼**：`0` 成功 ／ `1` 備份失敗 ／ `2` 設定或環境有問題（備份根本沒開始）。
+
+> **如果你要自己寫保留政策，請避開這個坑。** 網路上常見的寫法
+> `Get-ChildItem -Path $BackupDir -Include "*.dump","*.sql" -File` 在**沒有 `-Recurse`、
+> 且路徑結尾沒有 `\*`** 的情況下，`-Include` 會被**完全忽略**——一個檔案都不會刪，卻也不會
+> 報任何錯誤。結果是備份目錄無聲無息地一直長大，直到某天磁碟滿了、備份開始失敗才發現。
+> `backup_task.ps1` 改用「取回全部檔案再以副檔名過濾」，行為明確，不會踩到這個坑。
+
+> **另一個常見誤判：用「目錄裡有沒有檔案」判斷備份成功。** 備份失敗時 `pg_dump` 仍會留下一個
+> 0 位元組的空檔（它先建立輸出檔，才去連資料庫）。**請一律以退出碼判斷成敗。**
+> `backup_task.ps1` 會在失敗時清掉**這一輪**產生的空檔，且只清這一輪的，不會誤刪既有檔案。
 
 ### 5.2 以 SYSTEM 身分註冊至 Windows 工作排程器 (Task Scheduler)
 
@@ -492,28 +507,62 @@ exit 0
 
 以 `SYSTEM` 身分執行則完全沒有這兩個問題：`SYSTEM` 沒有「密碼」需要到期或更換，工作排程器也不需要儲存任何帳號密碼。這是本工具在使用者無法建立專用服務帳號的環境下，唯一不會隨時間推移而悄悄失效的做法。
 
-#### 🚀 一鍵註冊每日凌晨 02:00 自動備份任務：
+#### 方法 A：用現成腳本註冊（建議）
 
-以**系統管理員身分**開啟 PowerShell 或命令提示字元，執行：
+以**系統管理員身分**開啟 PowerShell，執行 [5.1 節](#51-現成腳本的位置與用途)介紹的設定腳本：
+
+```powershell
+cd <專案目錄>\scripts
+.\register-backup-task.ps1
+```
+
+它會把連線設定、排程註冊與一次試跑一併完成，並在過程中擋掉幾個實際會出事的情況：
+執行身分不是系統管理員、`pgbackup.exe` 或備份腳本被放在 `SYSTEM` 讀不到的個人資料夾底下、
+客戶端工具沒就緒、備份目錄沒開放給你平常的身分讀取。
+
+#### 方法 B：手動註冊
+
+想自己掌控每個步驟，或要把註冊動作納入既有的部署流程時使用：
 
 ```powershell
 $scriptPath = "C:\Scripts\PostgresBackup\backup_task.ps1"
+$cliPath    = "C:\Tools\PostgresBackup\pgbackup.exe"
+$backupDir  = "D:\DatabaseBackups\my_database"
+$pgBinPath  = "C:\Tools\pgsql\bin"
 
-# 註冊每日 02:00 執行之排程 (以 SYSTEM 帳戶於後台安靜執行，無須任何人登入 Windows)
-schtasks /Create `
-    /TN "PostgresBackup_Daily" `
-    /TR "powershell.exe -ExecutionPolicy Bypass -File `"$scriptPath`"" `
-    /SC DAILY `
-    /ST 02:00 `
-    /RU "SYSTEM" `
-    /F
+# 路徑含空白時會被拆成兩個參數，所以每個值都要自己帶上引號
+$argument = @(
+    '-NoProfile', '-ExecutionPolicy', 'Bypass'
+    '-File',         "`"$scriptPath`""
+    '-ProfileName',  '"正式環境"'
+    '-BackupDir',    "`"$backupDir`""
+    '-CliPath',      "`"$cliPath`""
+    '-PgBinPath',    "`"$pgBinPath`""
+) -join ' '
+
+$action    = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $argument
+$trigger   = New-ScheduledTaskTrigger -Daily -At 02:00
+$principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
+$settings  = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew
+
+Register-ScheduledTask -TaskName "PostgresBackup_Daily" `
+    -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force
 ```
 
+> **這裡刻意用 `Register-ScheduledTask` 而不是 `schtasks /Create`。** `schtasks` 的 `/TR`
+> 命令字串有長度上限（約 261 字元），路徑一長就會被**無聲截斷**，排程註冊看起來成功、實際上
+> 執行的是一段殘缺的指令。`Register-ScheduledTask` 沒有這個限制。
+>
+> 若你的環境只能用 `schtasks`，請在註冊後務必用
+> `(Get-ScheduledTask -TaskName "PostgresBackup_Daily").Actions` 確認參數沒有被截掉。
+
 #### 參數說明：
-- `/TN "PostgresBackup_Daily"`：排程任務名稱。
-- `/TR "powershell.exe ..."`：要觸發的命令（加上 `-ExecutionPolicy Bypass` 防止腳本被執行策略阻擋）。
-- `/SC DAILY /ST 02:00`：每日凌晨 2 點觸發。
-- `/RU "SYSTEM"`：以 `SYSTEM` 身分於背景執行——不需要密碼、不會到期，無論是否有使用者登入 Windows 均會穩定觸發，也才能讀取以機器範圍加密存放的命令列連線設定。
+- `-TaskName "PostgresBackup_Daily"`：排程任務名稱。
+- `-Execute 'powershell.exe' -Argument ...`：要觸發的命令。`-ExecutionPolicy Bypass` 防止腳本被執行策略阻擋，`-NoProfile` 避免載入設定檔拖慢啟動或引入非預期的環境。
+- `-Daily -At 02:00`：每日凌晨 2 點觸發。
+- `-UserId 'SYSTEM' -LogonType ServiceAccount`：以 `SYSTEM` 身分於背景執行——不需要密碼、不會到期，無論是否有使用者登入 Windows 均會穩定觸發，也才能讀取以機器範圍加密存放的命令列連線設定。
+- `-RunLevel Highest`：以最高權限層級執行。
+- `-StartWhenAvailable`：機器在排定時間是關機或休眠的話，開機後補跑一次，不會整天沒有備份。
 
 > **務必先以系統管理員身分執行過 `pgbackup profile set` 建立好連線設定，才註冊排程。** `SYSTEM` 讀不到 WPF 介面建立的介面連線設定——那套設定存放在使用者帳號範圍內。命令列連線設定存放於機器層級，任何在這台機器上以系統管理員權限執行 `pgbackup profile list` 的人都能看到同一份清單；註冊排程前，先確認清單中這筆設定的密碼狀態為「已設定」。
 
@@ -521,30 +570,213 @@ schtasks /Create `
 
 ### 5.3 驗證排程與日誌檢視
 
-#### 1. 查詢排程狀態：
+> **檢查排程結果不需要系統管理員權限。** 需要提權的只有「讀取連線設定存放區」那一件事
+> （`pgbackup profile list`，看的是主機／帳號／密碼有沒有設）。備份檔、執行日誌、排程的上次
+> 執行時間與退出碼，一般身分都看得到。
+
+#### 1. 一次看完所有狀態（建議）
+
 ```powershell
-schtasks /Query /TN "PostgresBackup_Daily" /FO LIST
+.\check-backup-status.ps1 -BackupDir "D:\DatabaseBackups\my_database"
 ```
 
-#### 2. 手動觸發排程測試：
-您可以隨時透過指令手動觸發測試，確認排程是否正常執行：
+它會報告四件事：排程任務還在不在、下次何時跑、上次的退出碼代表什麼；最近產出了哪些備份檔、
+多大、多久以前；最新一次執行日誌的結尾；以及備份目錄所在磁碟還剩多少空間。
+
+一切正常時退出碼為 `0`，有需要注意的事則為 `1`，可以直接接到監控系統。它也會主動抓出幾個
+容易被忽略的狀況：最新備份已經超過門檻時數沒更新（排程可能早就停了）、備份檔是 0 位元組
+（失敗的殘骸）、任務被停用、磁碟空間不足。
+
+#### 2. 直接查詢排程狀態
+
 ```powershell
-schtasks /Run /TN "PostgresBackup_Daily"
+Get-ScheduledTask -TaskName "PostgresBackup_Daily"
+Get-ScheduledTaskInfo -TaskName "PostgresBackup_Daily" |
+    Select-Object LastRunTime, LastTaskResult, NextRunTime
+```
+
+> **請用上面這兩個指令，不要去剖析 `schtasks /Query /FO LIST /V` 的文字輸出。** 那份輸出的
+> 欄位標籤會隨系統語系變化，值何時被寫入也不保證——本專案的驗證腳本就曾因此讀到空值，
+> 把一次成功的備份誤判成失敗。`Get-ScheduledTaskInfo` 回傳的 `LastTaskResult` 是真正的數值。
+>
+> 常見的 `LastTaskResult`：`0` 成功、`1` 備份失敗、`2` 設定或環境有問題、
+> `267009`（`0x41301`）目前仍在執行中、`267011`（`0x41303`）從來沒有執行過。
+
+#### 3. 手動觸發排程測試
+
+不必等到排定時間，隨時可以自己觸發一次確認排程正常（**不需要系統管理員權限**）：
+
+```powershell
+Start-ScheduledTask -TaskName "PostgresBackup_Daily"
 ```
 
 > **排程備份不會出現在圖形介面的「備份歷史」頁面。** 稽核歷史存放於 `%LOCALAPPDATA%\PostgresBackup\history.db`，而 `%LOCALAPPDATA%` 會隨 Windows 帳號解析到不同位置：以 `SYSTEM` 身分執行的排程任務，其歷史寫在 `C:\Windows\System32\config\systemprofile\AppData\Local\PostgresBackup\history.db`，圖形介面讀的則是你目前登入帳號的那一份。備份檔案本身不受影響，只有稽核紀錄落在別處。排程執行的結果請以下方的日誌檔與命令列退出碼來確認。
 
-#### 3. 檢查備份結果與日誌：
-進入備份輸出目錄（例如 `D:\DatabaseBackups\my_database\logs`），開啟當日日誌檢視輸出：
+#### 4. 檢查備份結果與日誌
+進入備份輸出目錄底下的 `logs\` 子目錄（例如 `D:\DatabaseBackups\my_database\logs`），
+開啟當次日誌檢視輸出。成功的一次長這樣：
+
 ```text
-[2026-09-17 23:58:37] === 開始執行 PostgreSQL 自動排程備份 ===
-[2026-09-17 23:58:37] 使用命令列連線設定: 正式環境
+[2026-09-17 23:58:37] [INFO] === 開始執行 PostgreSQL 排程備份 ===
+[2026-09-17 23:58:37] [INFO] 連線設定：正式環境
+[2026-09-17 23:58:37] [INFO] 輸出目錄：D:\DatabaseBackups\my_database
 [23:58:37] 啟動備份作業: 資料庫 'my_database'
 [23:58:37] 格式: Custom, 模式: SchemaAndData, 範圍: FullDatabase
 [23:58:40] [SUCCESS] 備份作業順利完成！
-[2026-09-17 23:58:40] 備份作業成功完成！
-[2026-09-17 23:58:40] 開始檢查並清理超過 7 天之舊備份檔案...
-[2026-09-17 23:58:40] === 排程作業圓滿結束 ===
+[2026-09-17 23:58:40] [INFO] 備份完成：my_database_20260917235837.dump（128.40 MB）
+[2026-09-17 23:58:40] [INFO] 備份檔：已清除 my_database_20260910235836.dump（2026-09-10）
+[2026-09-17 23:58:40] [INFO] 備份檔：共清除 1 個檔案，釋出 127.90 MB。
+[2026-09-17 23:58:40] [INFO] 還原前快照：沒有超過 30 天的檔案需要清理。
+[2026-09-17 23:58:40] [INFO] 日誌：已清除 0 個超過 30 天的日誌檔。
+[2026-09-17 23:58:40] [INFO] === 排程作業順利結束（退出碼 0）===
+```
+
+失敗的一次會以 `[ERROR]` 結尾並帶出退出碼，而且會把該次留下的 0 位元組空檔清掉：
+
+```text
+[2026-09-18 02:00:03] [ERROR] 備份失敗，pgbackup 回傳退出碼 1。詳細錯誤見上方 pg_dump 的輸出。
+[2026-09-18 02:00:03] [WARN] 已清除本次失敗留下的 0 位元組空檔：my_database_20260918020001.dump
+[2026-09-18 02:00:03] [ERROR] === 排程作業結束（退出碼 1）===
+```
+
+---
+
+### 5.4 檔案與路徑一覽
+
+排程備份牽涉到的東西散在好幾個地方，這一節把它們集中列出來。表格裡的 `<備份目錄>`
+指的是你在設定時指定的 `-BackupDir`，其餘位置則是固定的。
+
+#### 你自己決定位置的東西
+
+| 內容 | 位置 | 說明 |
+| :--- | :--- | :--- |
+| **備份檔** | `<備份目錄>\` | 檔名為 `{資料庫名稱}_{yyyyMMddHHmmss}.dump`（或 `.sql`）。由 `-RetentionDays` 控制保留天數 |
+| **還原前快照** | `<備份目錄>\snapshots\` | 檔名為 `{資料庫名稱}_snapshot_{yyyyMMddHHmmss}.dump`。**由還原作業產生，不是備份產生的**；位置固定在「來源備份檔所在目錄」底下，CLI 無參數可改。由 `-SnapshotRetentionDays` 控制 |
+| **執行日誌** | `<備份目錄>\logs\` | 檔名為 `backup_{yyyyMMdd_HHmmss}.log`，每次執行一個檔。由 `-LogRetentionDays` 控制 |
+| **腳本** | `scripts\` | `register-backup-task.ps1`、`backup_task.ps1`、`check-backup-status.ps1` |
+| **`pgbackup.exe`** | 你安裝的位置 | 例如 `C:\Tools\PostgresBackup\` |
+| **官方客戶端工具** | 你安裝的位置 | 例如 `C:\Tools\pgsql\bin`（免安裝可攜版）或 `C:\Program Files\PostgreSQL\18\bin`（winget 安裝） |
+
+> **備份目錄、腳本與 `pgbackup.exe` 都不要放在個人資料夾底下**（桌面、下載、
+> `C:\Users\<你的帳號>\...`）。排程以 `SYSTEM` 身分執行，讀不到那些位置。
+> 請放在 `C:\Tools\`、`C:\Program Files\` 或某個資料碟的共用目錄。
+
+> **備份目錄的磁碟空間要抓兩倍。** 還原作業會在 `snapshots\` 再寫一份完整備份，
+> 等於同一顆磁碟上要放得下兩份。
+
+#### 位置固定的東西
+
+| 內容 | 位置 | 誰讀得到 |
+| :--- | :--- | :--- |
+| **命令列連線設定**（非機密欄位） | `%ProgramData%\PostgresBackup\cli-connection-profiles.json` | 系統管理員與 `SYSTEM` |
+| **命令列連線設定的加密密碼** | `%ProgramData%\PostgresBackup\cli-credentials.dat` | 系統管理員與 `SYSTEM` |
+| **介面連線設定**（WPF 用，與上面完全獨立） | `%LOCALAPPDATA%\PostgresBackup\` 與 Windows 認證管理員 | 只有你這個 Windows 帳號 |
+| **你手動操作的稽核歷史** | `%LOCALAPPDATA%\PostgresBackup\history.db` | 只有你這個 Windows 帳號 |
+| **排程執行的稽核歷史** | `%SystemRoot%\System32\config\systemprofile\AppData\Local\PostgresBackup\history.db` | `SYSTEM` |
+
+`%ProgramData%` 通常是 `C:\ProgramData`，`%LOCALAPPDATA%` 通常是
+`C:\Users\<你的帳號>\AppData\Local`，`%SystemRoot%` 通常是 `C:\Windows`。
+
+#### 哪些需要系統管理員權限？
+
+| 你想做的事 | 需要提權？ | 指令 |
+| :--- | :---: | :--- |
+| 查排程跑得好不好、看備份檔與日誌 | **否** | `.\check-backup-status.ps1 -BackupDir "<備份目錄>"` |
+| 查排程的上次執行結果 | **否** | `Get-ScheduledTaskInfo -TaskName "PostgresBackup_Daily"` |
+| 手動觸發一次備份 | **否** | `Start-ScheduledTask -TaskName "PostgresBackup_Daily"` |
+| 建立或更新連線設定 | **是** | `pgbackup profile set --name "..." ...` |
+| 查看連線設定清單 | **是** | `pgbackup profile list` |
+| 註冊或移除排程任務 | **是** | `.\register-backup-task.ps1` ／ `Unregister-ScheduledTask` |
+
+> **為什麼看連線設定要提權，看備份結果卻不用？** 因為存放區裡有密碼，備份目錄裡沒有。
+> 存放區刻意只開放給系統管理員與 `SYSTEM`——這道檔案權限就是保護密碼的那道防線
+> （詳見[第 6 節](#6-安全性說明)）。備份檔與日誌沒有這個理由，不該、也不會擋你。
+>
+> **請不要為了免提權而把自己的帳號加進 `%ProgramData%\PostgresBackup` 的權限清單。**
+> 那會讓任何以你身分執行、但沒有提權的程式（隨手跑的腳本、下載來的工具、中招的常駐程式）
+> 都能讀走加密檔並直接解開密碼——機器範圍加密的解密**不需要**任何特殊權限，
+> 檔案權限才是唯一擋住它的東西。要看連線設定時，開一個系統管理員的 PowerShell 就好。
+
+#### 排程任務本身
+
+| 項目 | 預設值 |
+| :--- | :--- |
+| 任務名稱 | `PostgresBackup_Daily`（可用 `-TaskName` 更改） |
+| 執行身分 | `SYSTEM`（`ServiceAccount` 登入類型，最高權限層級） |
+| 觸發時間 | 每日 `02:00`（可用 `-At` 更改） |
+
+---
+
+### 5.5 移除排程備份
+
+不想再自動備份了，或要把這台機器上的設定收掉時，用
+[`scripts\unregister-backup-task.ps1`](../scripts/unregister-backup-task.ps1)。
+
+#### 先預演，看清楚會動到什麼
+
+`-DryRun` 只顯示「會做什麼」，不會刪任何東西，而且**不需要系統管理員權限**：
+
+```powershell
+.\unregister-backup-task.ps1 -BackupDir "D:\DatabaseBackups\my_database" -DryRun
+```
+
+它會先盤點：排程任務還在不在、存放區有幾個檔案、備份目錄裡有幾個備份檔與快照、總共多大、
+最新一份是什麼時候的。**看清楚再決定**。
+
+#### 確認無誤後，以系統管理員身分執行
+
+```powershell
+# 只停排程（最常見。備份檔、連線設定都留著）
+.\unregister-backup-task.ps1
+
+# 停排程並清掉連線設定（含其加密密碼）
+.\unregister-backup-task.ps1 -RemoveProfile -ProfileName "正式環境"
+
+# 整套拆乾淨，連備份檔一起刪
+.\unregister-backup-task.ps1 -RemoveProfile -ProfileName "正式環境" `
+                             -RemoveStore -RemoveBackups -BackupDir "D:\DatabaseBackups\my_database"
+```
+
+#### 預設什麼都不刪，只移除排程任務
+
+這是刻意的：**停掉排程，跟丟掉既有備份，是兩件完全不同的決定。** 很多人只是要暫停自動備份，
+或把排程搬到別台機器，既有的備份檔還得留著。所以要刪東西都得明確指定：
+
+| 參數 | 會刪掉什麼 |
+| :--- | :--- |
+| （不加任何參數） | 只移除排程任務 |
+| `-RemoveProfile -ProfileName "..."` | 再加上那筆命令列連線設定與其加密密碼 |
+| `-RemoveStore` | 再加上整個 `%ProgramData%\PostgresBackup` 目錄 |
+| `-RemoveBackups -BackupDir "..."` | **再加上整個備份目錄**，含所有備份檔、還原前快照與日誌 |
+
+破壞性的那兩項會要求你**輸入完整路徑**才執行，不是打個 `y` 就算數——比照本工具還原作業的
+防呆設計。在工作排程器、CI 這類沒有人值守的環境下讀不到輸入，會安全取消而不是硬做；
+自動化流程請明確加上 `-Yes`。
+
+#### 幾個會擋住你的情況（都是刻意的）
+
+- **存放區裡還有其他連線設定時，`-RemoveStore` 會拒絕執行。** 同一台機器可能有多組排程
+  共用那個存放區，刪掉會一起弄壞。確定要刪請再加 `-Force`。
+- **找不到排程任務不算失敗。** 它會提示你可能當初用了不同的 `-TaskName`，並給出列出所有
+  相關任務的指令：`Get-ScheduledTask | Where-Object TaskName -like "*PostgresBackup*"`。
+
+#### 這支腳本不會碰的東西
+
+結尾會明講，免得你以為已經清乾淨了：
+
+- 排程執行的稽核歷史：`%SystemRoot%\System32\config\systemprofile\AppData\Local\PostgresBackup\history.db`
+- 你手動操作的稽核歷史：`%LOCALAPPDATA%\PostgresBackup\history.db`
+- `pgbackup.exe` 與 PostgreSQL 官方客戶端工具本身
+- WPF 圖形介面的**介面連線設定**（那套存在你的 Windows 帳號底下，與命令列連線設定完全獨立）
+
+#### 不用腳本，手動移除
+
+```powershell
+# 移除排程任務
+Unregister-ScheduledTask -TaskName "PostgresBackup_Daily" -Confirm:$false
+
+# 移除命令列連線設定（含其加密密碼）
+pgbackup profile remove --name "正式環境"
 ```
 
 ---

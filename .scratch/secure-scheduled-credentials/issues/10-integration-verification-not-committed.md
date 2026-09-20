@@ -4,18 +4,18 @@
 
 **Blocked by:** 05, 06, 07, 09
 
-**Status:** ready-for-human
+**Status:** resolved
 
 **為何無法委派：** 剩餘項目需要本機系統管理員權限、已安裝的 PostgreSQL 客戶端工具（`pg_dump`），以及一個可連線的真實 PostgreSQL 執行個體。執行驗證的工作站三者皆不具備（非管理員、無 `pg_dump`、無本機 PostgreSQL 服務）。
 
 - [x] 驗證真實的機器範圍加密與解密往返能取回相同密碼
-- [ ] 驗證加密結果確實與機器綁定，無法在其他機器上解開 — **部分**，見下方註記
+- [x] 驗證加密結果確實與機器綁定，無法在其他機器上解開 — 以 SYSTEM 端對端間接證明（2026-09-20）
 - [x] 驗證存放區建立後檔案權限確實限定於系統管理員與 SYSTEM
 - [x] 驗證人為放寬權限後，`profile list` 確實輸出警告
 - [x] 驗證真實 Windows 認證管理員的寫入、讀回、刪除，以及寫入失敗時確實拋出例外
-- [ ] 驗證對真實 PostgreSQL 執行個體時，錯誤密碼被拒絕儲存、正確密碼通過 — **驗證邏輯已通過，CLI 包裝路徑仍需人工**。2026-09-19 已對 Docker 的 PostgreSQL 18.6 確認 `VerifyConnectionAsync` 本身：正確密碼通過並取回版本、錯誤密碼被拒、失敗訊息不含密碼。尚未透過 `pgbackup profile set` 實際走一遍（該指令會寫入真實的 ProgramData 存放區，需系統管理員權限）
-- [ ] 以系統管理員身分建立連線設定後，註冊以 SYSTEM 身分執行的工作排程任務，確認能讀取設定並完成一次實際備份作業 — **需人工**
-- [x] 回報所有驗證結果（就已執行的部分）
+- [x] 驗證對真實 PostgreSQL 執行個體時，錯誤密碼被拒絕儲存、正確密碼通過 — 2026-09-19 先確認 `VerifyConnectionAsync` 本身（正確密碼通過並取回版本、錯誤密碼被拒、失敗訊息不含密碼）；2026-09-20 再以系統管理員身分透過 `pgbackup profile set` 實機走完整條 CLI 包裝路徑
+- [x] 以系統管理員身分建立連線設定後，註冊以 SYSTEM 身分執行的工作排程任務，確認能讀取設定並完成一次實際備份作業 — 2026-09-20 通過
+- [x] 回報所有驗證結果
 - [x] 這些測試檔案不得簽入版控，驗證後移除或置於版控忽略位置
 
 ## Comments
@@ -121,3 +121,131 @@ pgbackup profile remove --name "verify"
 3. Docker 的 PostgreSQL 保持執行；連線參數用 `-H localhost -P 5432 -d postgres -u pex`
 
 具體指令見上方「剩餘項目的執行方式」一節（其中的 `-u postgres` 請改為 `-u pex`）。
+
+## Comments
+
+### 2026-09-20 — 可攜版客戶端工具已就位，CLI 備份／還原全路徑實測通過；仍缺管理員權限
+
+使用者把 EDB 免安裝版客戶端工具放到 `dist2\pgsql\bin`（18.6），**「本機無 Windows 版 pg_dump」這個主要障礙已排除**。
+執行身分仍為 `LCNB207\Lawrence`（**非**系統管理員），因此票 10 最後一項（SYSTEM 排程端對端）依舊無法執行。
+
+本次以 Docker 的 PostgreSQL 18.6（`stock-analysis-postgres`，`localhost:5432`，帳號 `pex`）實測 `dist\cli\pgbackup.exe`
+（建置於 2026-09-20 20:00，比原始碼新）。測試資料庫 `pgbackup_verify` 為本次自建、測完已刪除，未動到既有資料。
+
+| # | 項目 | 結果 |
+|---|---|---|
+| 1 | `check-tools --pg-bin-path` 偵測可攜版工具 | PASS（來源 CustomPath，版本 18.6） |
+| 2 | `check-tools` 帶連線參數的伺服器相容性檢查 | PASS（18.6 對 18.6 相容） |
+| 3 | `backup -f custom -m all` | PASS（退出碼 0，檔頭 `PGDMP`，`pg_restore -l` 可列出 16 項） |
+| 4 | `backup -f plain -m schema` | PASS（有 CREATE TABLE、無 COPY 資料） |
+| 5 | `backup -f plain -m data` | PASS（無 CREATE TABLE、有 COPY；中文與 emoji 完整保留） |
+| 6 | `backup -n public`（指定綱要） | PASS |
+| 7 | `backup -t public.customer`（指定資料表） | PASS（目錄中只有 customer 及其序列） |
+| 8 | 錯誤密碼 | PASS（退出碼 1，訊息為 pg_dump 的驗證失敗，日誌不含密碼） |
+| 9 | 不存在的資料庫 | PASS（退出碼 1） |
+| 10 | 不存在的 `--profile` | PASS（退出碼 1，明確中止不續跑） |
+| 11 | `profile list`（存放區尚未建立） | PASS（提示先 `profile set`，退出碼 0） |
+| 12 | `restore` 至空資料庫（normal + 前置快照） | PASS（16 項全還原，資料/總和/中文/emoji 與來源一致） |
+| 13 | `restore -m data`（先污染再還原） | PASS（TRUNCATE 後依外鍵順序寫回，500 筆與總和還原正確） |
+| 14 | `restore -m clean` | PASS |
+| 15 | `restore -m normal`（物件已存在） | PASS（選取 0 項、略過 16 項既有項目） |
+| 16 | 未加 `-y` 的非互動還原 | PASS（印出「輸入不符，還原作業已安全取消」，退出碼 1，未動資料庫） |
+| 17 | 純文字 `.sql` 還原（psql 路徑） | PASS（結構＋資料兩段還原後資料一致） |
+| 18 | 規模測試：實際備份 `stock_analysis`（5205 MB） | PASS（466.23 MB custom dump，191 秒，366 項，退出碼 0） |
+| 19 | 密碼是否外洩到 `pg_dump` 命令列 | PASS（見下） |
+
+**第 19 項的實測證據**（於 5 GB 備份執行中以 `Get-CimInstance Win32_Process` 抓取）：
+
+- `pgbackup.exe` 自己的命令列**含**密碼 → 證實手冊 §6 與 FAQ Q2 對 `-p` 的警告屬實
+- `pg_dump.exe` 的命令列**不含**密碼（只有 `-h -p -U -d -Fc -v -f`）→ 證實密碼是以 `PGPASSWORD` 環境變數往下傳，不會擴散到子處理序命令列
+
+**一項小缺陷（非阻斷，已改記入手冊而非改程式）：** 備份失敗時輸出目錄會留下 0 位元組的 `.dump`。這是 `pg_dump` 先建檔再連線的行為，工具本身已以非零退出碼與錯誤訊息正確回報。已在 `docs/USER_MANUAL.md` §4.2 加註「以退出碼判斷成敗，不要以目錄裡有沒有檔案判斷」。
+
+**`verify-scheduled-backup.ps1` 已加上 `-PgBinPath` 參數**（該檔仍不簽入版控）：可攜版工具不在 PATH，原本腳本的 `check-tools` 前置檢查會直接擋下；現在指定後，第 5 段建立的 SYSTEM 排程指令也會一併帶上同一個 `--pg-bin-path`（`SYSTEM` 同樣讀不到 PATH 以外的東西）。
+
+**仍待人工執行（需系統管理員身分開啟的 PowerShell）：**
+
+```powershell
+cd D:\Project\PostgreTools\PostgresBackup
+Start-Transcript -Path "$env:TEMP\pgbackup-verify-output.txt"
+.\verify-scheduled-backup.ps1 -PgBinPath "D:\Project\PostgreTools\PostgresBackup\dist2\pgsql\bin" -Database postgres -Username pex
+Stop-Transcript
+```
+
+`C:\ProgramData\PostgresBackup` 目前**仍不存在**（本次刻意未以非管理員身分觸發 `profile set`，以保留乾淨起點）。
+
+## Comments
+
+### 2026-09-20 — SYSTEM 端對端驗證通過，票 10 結案
+
+使用者以系統管理員身分執行 `verify-scheduled-backup.ps1`（`-PgBinPath` 指向 `dist2\pgsql\bin`，
+`-Database postgres -Username pex`）。存放區 `C:\ProgramData\PostgresBackup` 於執行前確認**尚未存在**，
+是乾淨起點，由工具自行建立。
+
+**第 1～4 段全數 PASS：**
+
+| 段落 | 檢查 | 結果 |
+|---|---|---|
+| 1 | 錯誤密碼退出碼非零、輸出說明「並未儲存」、輸出不含密碼、存放區沒留下該筆設定 | PASS |
+| 1 | **驗證失敗時連存放區目錄都不會被建出來**（權限檢查與寫入都在連線驗證通過之後） | PASS |
+| 2 | 正確密碼退出碼 0、輸出「連線驗證成功」、輸出不含密碼 | PASS |
+| 3 | 存放區目錄已建立、**繼承已停用** | PASS |
+| 3 | 允許存取的身分僅 `NT AUTHORITY\SYSTEM`(FullControl) 與 `BUILTIN\Administrators`(FullControl) | PASS |
+| 3 | 加密密碼檔與連線設定檔皆存在、**都不含明文密碼**、未殘留暫存檔 | PASS |
+| 4 | `profile list` 顯示該筆設定、密碼狀態「已設定」、**無權限警告**、輸出不含密碼 | PASS |
+
+**第 5 段（核心）—— 主張成立：**
+
+| 檢查 | 結果 |
+|---|---|
+| 排程任務建立成功（執行身分 SYSTEM，`/RL HIGHEST`） | PASS |
+| 排程任務已觸發、已結束未逾時 | PASS |
+| 排程任務的執行結果為 0 | **FAIL —— 判定為驗證腳本缺陷，非產品缺陷，見下** |
+| 已產出備份檔 `postgres_20260920212714.dump` | PASS |
+| 備份檔非空（1070 bytes） | PASS |
+| 備份檔是真正的 `pg_dump` 輸出（檔頭 `PGDMP`） | PASS |
+| 排程日誌不含密碼 | PASS |
+
+排程日誌結尾：`[21:27:16] [SUCCESS] 備份作業順利完成！產出檔案大小: 1.04 KB, 耗時: 2.26 秒`
+
+**結論：以 `SYSTEM` 身分執行的排程任務，確實讀取到系統管理員建立的機器範圍連線設定，
+解開了加密密碼，並完成一次真實的 `pg_dump` 備份。** `SYSTEM` 與建立設定的
+`LCNB207\Lawrence` 是不同帳號，它解得開 → 金鑰綁定的是這台機器而非某個使用者，
+因此「機器綁定」一項亦由此間接證明（單機無法證明「在別台機器上解不開」，見票內既有說明）。
+
+### 那一項 FAIL 的判讀：驗證腳本的第三個同類缺陷
+
+`Last Result =` 後面是**空的**——不是非零錯誤碼，是根本沒讀到值。同一段落中備份檔存在、
+檔頭為 `PGDMP`、日誌印出 `[SUCCESS]`，三者互相印證備份確實成功；若備份失敗，這三項不可能同時成立。
+
+根因：該斷言在**剖析 `schtasks /Query /FO LIST /V` 的主控台文字輸出**。這種取值方式本身不可靠——
+欄位標籤隨系統語系變化，值何時落盤也不保證。以非提權身分重放同一段邏輯（相同的 4 秒時序）可正確取得 `0`，
+無法重現；差異在於實際任務是 `/RU SYSTEM /RL HIGHEST`。
+
+這是本次在 `verify-scheduled-backup.ps1` 中發現的**第三個**同類缺陷（前兩個為反斜線轉義錯誤，
+見下），根因一致：腳本以脆弱的方式取得事實。
+
+**已修正**（該檔仍不簽入版控）：
+
+1. 行 130 `-notmatch '\(obj|bin)\'` → 無效的正規表示式（`Too many )'s`），反斜線只寫一根，
+   直接讓腳本在前置檢查階段中止。改為 `'\\(obj|bin)\\'`。
+2. 行 143 訊息中混入字面的退格字元（0x08），`.\build.ps1` 被印成 `.uild.ps1`。已還原。
+3. 第 5 段的退出碼判讀改為向工作排程器 API 要值（`Get-ScheduledTask` 取狀態、
+   `Get-ScheduledTaskInfo.LastTaskResult` 取退出碼），不再剖析主控台文字；並對
+   `0x41301`（任務仍在執行中）加上最多 5 秒的安頓重試。
+
+修正後已實測：成功任務得 `LastTaskResult=0`（斷言 True），刻意失敗的任務得 `LastTaskResult=1`
+（斷言 False）——確認新斷言仍能抓出真正的失敗，不是把 FAIL 藏起來。
+
+另補：整份腳本的 8 個正規表示式已逐一試編譯通過，全檔不再有控制字元。
+
+### 票 11 的附帶評估（`EnsureRestrictedDirectory` 只設 DACL、不動擁有者）
+
+本次第 3 段的實測顯示，存放區建立後**繼承已停用、允許清單僅 Administrators 與 SYSTEM**，
+達成 spec 所要求的保護目標。擁有者未被變更一事維持票 11 的既有結論：屬額外強化而非漏洞
+（spec 已明確不防護具本機系統管理員權限者）。
+
+### 清理狀態
+
+腳本已自動刪除排程任務 `PostgresBackup_Verify`、連線設定 `verify-scheduled`（含其加密密碼）
+與輸出目錄 `C:\Temp\pgbackup-verify`。`C:\ProgramData\PostgresBackup` 為本次建立，刻意保留。
