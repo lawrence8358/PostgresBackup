@@ -61,7 +61,7 @@ public sealed class ClientToolRun
 
         // 離開碼為零只代表工具沒有抱怨。備份還要求產出檔案確實存在，該判定屬於呼叫端。
         var succeeded = processResult.ExitCode == 0 && (request.ConfirmSuccess?.Invoke() ?? true);
-        var fileSize = request.MeasureRecordedFileSize?.Invoke(succeeded) ?? 0;
+        var fileSize = MeasureFileSize(request, succeeded, onLogLine);
 
         var result = new ClientToolRunResult
         {
@@ -212,6 +212,30 @@ public sealed class ClientToolRun
         }
 
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// 取得紀錄用的檔案大小。量測失敗（例如檔案在作業途中被移除）只輸出一行
+    /// <c>[WARNING]</c> 並記為 0 —— 取不到大小是紀錄的缺憾，不是作業的失敗，
+    /// 不該讓一個已經跑完的備份或還原改以例外收場。
+    /// </summary>
+    private static long MeasureFileSize(
+        ClientToolRunRequest request,
+        bool succeeded,
+        Action<string>? onLogLine)
+    {
+        if (request.MeasureRecordedFileSize is null) return 0;
+
+        try
+        {
+            return request.MeasureRecordedFileSize(succeeded);
+        }
+        catch (Exception ex)
+        {
+            onLogLine?.Invoke(
+                $"[{DateTime.Now:HH:mm:ss}] [WARNING] {CoreStrings.Format("ClientToolRun_Log_FileSizeUnavailable", ex.Message)}");
+            return 0;
+        }
     }
 
     /// <summary>

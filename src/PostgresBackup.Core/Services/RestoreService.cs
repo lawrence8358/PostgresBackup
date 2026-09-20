@@ -112,7 +112,10 @@ public class RestoreService : IRestoreService
 
             if (!listResult.IsSuccess)
             {
-                var errMsg = CoreStrings.Format("Restore_Error_ArchiveListFailed", listResult.ErrorMessage);
+                // 失敗結果的 ErrorMessage 恆為非 null（ExtractErrorMessage 至少會回傳資源字串），
+                // 但該不變式只由 IsSuccess 承載，編譯器看不到。
+                var errMsg = CoreStrings.Format(
+                    "Restore_Error_ArchiveListFailed", listResult.ErrorMessage ?? string.Empty);
                 onLogLine?.Invoke($"[ERROR] {errMsg}");
                 return RestoreResult.Failure(
                     errMsg, listResult.ExitCode, listResult.Elapsed, listResult.CommandLine);
@@ -338,7 +341,7 @@ public class RestoreService : IRestoreService
             return RestoreResult.Success(run.Elapsed, run.CommandLine, snapshotFilePath);
         }
 
-        onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [ERROR] {CoreStrings.Format("Restore_Log_Failed", run.ExitCode, run.ErrorMessage)}");
+        onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [ERROR] {CoreStrings.Format("Restore_Log_Failed", run.ExitCode, run.ErrorMessage ?? string.Empty)}");
         return RestoreResult.Failure(
             run.ErrorMessage, run.ExitCode, run.Elapsed, run.CommandLine, snapshotFilePath);
     }

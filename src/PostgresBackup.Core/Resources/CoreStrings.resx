@@ -118,6 +118,9 @@
   <data name="Backup_Log_HistoryWriteFailed" xml:space="preserve">
     <value>Failed to write to the history repository: {0}</value>
   </data>
+  <data name="ClientToolRun_Log_FileSizeUnavailable" xml:space="preserve">
+    <value>Could not determine the file size for the history record: {0}</value>
+  </data>
   <data name="Backup_Error_NonZeroExit" xml:space="preserve">
     <value>Backup failed: pg_dump returned a non-zero exit code.</value>
   </data>

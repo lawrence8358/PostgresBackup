@@ -118,6 +118,9 @@
   <data name="Backup_Log_HistoryWriteFailed" xml:space="preserve">
     <value>寫入歷史倉儲失敗: {0}</value>
   </data>
+  <data name="ClientToolRun_Log_FileSizeUnavailable" xml:space="preserve">
+    <value>無法取得紀錄用的檔案大小: {0}</value>
+  </data>
   <data name="Backup_Error_NonZeroExit" xml:space="preserve">
     <value>備份作業失敗，pg_dump 回傳非零退出碼。</value>
   </data>

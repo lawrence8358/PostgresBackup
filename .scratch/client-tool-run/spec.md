@@ -79,6 +79,18 @@ var err = !string.IsNullOrWhiteSpace(processResult.StandardError)
 
 **已知的外觀變化：** 此規則會讓 `-h localhost`、`-d mydb` 這類不含空白的值不再帶引號（現行實作一律加引號）。命令列語意完全相同，但 `BackupRecord.Arguments` 欄位存下的字串外觀會改變，歷史紀錄詳情頁顯示的內容因此略有不同。此為刻意接受的結果：拼接規則應由「這個值需不需要引號」決定，而非由呼叫端的習慣決定。既有歷史紀錄不受影響，不需遷移。
 
+### 實作後補記的行為變化
+
+除了上述引號外觀之外，實作過程中另有兩項行為變化，於此登記：
+
+**一、計時範圍收斂為單次工具執行。** 計時移入模組後，`BackupResult.Duration` 不再包含客戶端工具偵測的時間，`RestoreResult.Duration` 不再包含計畫產出、還原前安全快照與清空資料表的時間。還原的影響較大 —— 安全快照動輒數分鐘。
+
+判定為可接受且較正確：快照本身已經留下自己的一筆紀錄與自己的耗時，舊行為等於把同一段時間同時計入兩筆紀錄；新行為讓兩筆紀錄的耗時可以相加。既有歷史紀錄不受影響。
+
+計畫階段失敗的早期返回，耗時改為取自 `--list` 那次探查；快照之後、工具執行之前的失敗（暫存清單檔寫入、清空資料表）改回報 `TimeSpan.Zero`，與同類的前三個早期返回一致。
+
+**二、紀錄寫入警告的輸出順序。** 紀錄寫入移入模組後發生在服務印出 `[SUCCESS]` / `[ERROR]` 之前，因此 `[WARNING]` 寫入失敗那一行的位置由其後移至其前。僅影響日誌閱讀順序。
+
 ### 不為模組設介面
 
 理由見 Solution 一節。測試透過抽換 `IProcessRunner` 達成，`BackupServiceTests.FakeProcessRunner` 既有的環境變數擷取能力（`CapturedPassword`、`CapturedLanguage`、`LanguageVariableRemoved` 等）可直接沿用。

@@ -151,21 +151,29 @@ public class ClientToolRunTests
         Assert.Equal("-h db.internal -p 6543 -U dbadmin -d mydb -Fc -v", runner.CapturedArguments);
     }
 
-    [Fact]
-    public async Task RunAsync_WhenConnectionFieldsAreBlank_UsesTheDocumentedFallbacks()
+    /// <summary>
+    /// 每個後備值各自獨立生效：一個欄位空白不該把其他欄位也換成後備值。
+    /// </summary>
+    [Theory]
+    [InlineData("   ", 6543, "dbadmin", "mydb", "-h localhost -p 6543 -U dbadmin -d mydb")]
+    [InlineData("db.internal", 0, "dbadmin", "mydb", "-h db.internal -p 5432 -U dbadmin -d mydb")]
+    [InlineData("db.internal", 6543, "", "mydb", "-h db.internal -p 6543 -U postgres -d mydb")]
+    [InlineData("db.internal", 6543, "dbadmin", "  ", "-h db.internal -p 6543 -U dbadmin -d postgres")]
+    public async Task RunAsync_WhenAConnectionFieldIsBlank_OnlyThatFieldFallsBack(
+        string host, int port, string username, string database, string expectedPrefix)
     {
         var runner = new RecordingProcessRunner();
         var run = new ClientToolRun(runner);
 
         await run.RunAsync(Request(new ConnectionSettings
         {
-            Host = "   ",
-            Port = 0,
-            Username = string.Empty,
-            Database = string.Empty
+            Host = host,
+            Port = port,
+            Username = username,
+            Database = database
         }));
 
-        Assert.StartsWith("-h localhost -p 5432 -U postgres -d postgres ", runner.CapturedArguments);
+        Assert.StartsWith(expectedPrefix + " ", runner.CapturedArguments);
     }
 
     [Fact]
@@ -283,6 +291,29 @@ public class ClientToolRunTests
         Assert.Equal(0, result.ExitCode);
         Assert.Equal(CoreStrings.Get("Backup_Error_NonZeroExit"), result.ErrorMessage);
         Assert.Equal(BackupStatus.Failed, Assert.Single(history.Records).Status);
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenMeasuringTheFileSizeThrows_WarnsWithoutFailingTheRun()
+    {
+        var runner = new RecordingProcessRunner();
+        var history = new RecordingHistoryRepository();
+        var run = new ClientToolRun(runner, history);
+
+        var logs = new List<string>();
+        var result = await run.RunAsync(
+            Request() with
+            {
+                MeasureRecordedFileSize = _ =>
+                    throw new FileNotFoundException("the file went away mid-run")
+            },
+            onLogLine: logs.Add);
+
+        // 取不到大小是紀錄的缺憾，不是作業的失敗 —— 已經跑完的作業不該改以例外收場。
+        Assert.True(result.IsSuccess);
+        Assert.Equal(0, result.RecordedFileSizeBytes);
+        Assert.Contains(logs, l => l.Contains("[WARNING]") && l.Contains("the file went away mid-run"));
+        Assert.Equal(BackupStatus.Success, Assert.Single(history.Records).Status);
     }
 
     [Fact]
