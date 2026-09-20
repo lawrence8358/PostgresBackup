@@ -32,6 +32,16 @@ public class BackupService : IBackupService
     {
         ArgumentNullException.ThrowIfNull(options);
 
+        // 0. 拒絕以完整連線字串描述的連線。pg_dump 的參數只由主機／連接埠／使用者／
+        // 資料庫欄位組成，不認得連線字串；靜默忽略會讓使用者以為備份的是連線字串
+        // 指向的那台伺服器。
+        if (!string.IsNullOrWhiteSpace(options.Connection.ConnectionString))
+        {
+            var errMsg = CoreStrings.Get("Backup_Error_ConnectionStringNotSupported");
+            onLogLine?.Invoke($"[ERROR] {errMsg}");
+            return BackupResult.Failure(errMsg, -1, TimeSpan.Zero, string.Empty);
+        }
+
         var stopwatch = Stopwatch.StartNew();
 
         // 1. 驗證與解析客戶端工具路徑

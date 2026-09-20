@@ -33,3 +33,5 @@ Used by `/wayfinder`. The **map** is a file with one **child** file per ticket.
 
 - `postgres-backup` — the original product spec and its implementation issues
 - `secure-scheduled-credentials` — CLI machine-scoped connection profiles and scheduled-backup credential hardening
+- `desktop-ui-hardening` — truthful client-tool state, responsive task pages, and operation-feedback hardening in the WPF app
+- `client-tool-run` — consolidating the duplicated client-tool execution flow shared by backup and restore

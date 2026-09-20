@@ -241,4 +241,10 @@
   <data name="ProfileStore_Error_FileCorrupted" xml:space="preserve">
     <value>The connection profile file is damaged and cannot be read ({0}): {1} Its contents cannot be recovered; recreate the affected connection profiles.</value>
   </data>
+  <data name="Backup_Error_ConnectionStringNotSupported" xml:space="preserve">
+    <value>This connection carries a full connection string, which a backup job cannot honour: pg_dump is configured from the host, port, user and database fields only and never reads the connection string. Clear the connection string and set those fields instead.</value>
+  </data>
+  <data name="Restore_Error_ConnectionStringNotSupported" xml:space="preserve">
+    <value>This connection carries a full connection string, which a restore job cannot honour consistently: the target database is inspected and cleared through the connection string, but pg_restore is configured from the host, port, user and database fields. Restoring in this state could inspect and clear one server while writing the data to another. Clear the connection string and set those fields instead.</value>
+  </data>
 </root>

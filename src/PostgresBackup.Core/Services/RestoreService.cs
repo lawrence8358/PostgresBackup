@@ -41,6 +41,16 @@ public class RestoreService : IRestoreService
     {
         ArgumentNullException.ThrowIfNull(options);
 
+        // 0. 拒絕以完整連線字串描述的連線。目標資料庫的檢查與清空走 ToConnectionString()
+        // （認得連線字串），pg_restore 的參數卻只由主機／連接埠／使用者／資料庫欄位組成
+        // （不認得連線字串）。兩者若指向不同伺服器，還原會清空一台、寫入另一台。
+        if (!string.IsNullOrWhiteSpace(options.Connection.ConnectionString))
+        {
+            var errMsg = CoreStrings.Get("Restore_Error_ConnectionStringNotSupported");
+            onLogLine?.Invoke($"[ERROR] {errMsg}");
+            return RestoreResult.Failure(errMsg, -1, TimeSpan.Zero, string.Empty);
+        }
+
         var stopwatch = Stopwatch.StartNew();
 
         // 1. 驗證來源檔案是否存在
