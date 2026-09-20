@@ -16,31 +16,44 @@
 
 ## 2. 現在的狀態
 
-### 已完成並通過驗證
+**票 01、02、03 已全部完成**（`Status: resolved`，檢查清單保留打勾）。票 06 的擋板部分亦為 `resolved`，剩餘工作（型別重整）仍開著。
 
-**票 06 的擋板部分**已經做完（`Status: resolved`）。內容是：備份與還原收到帶有 `ConnectionString` 的連線設定時直接回傳失敗。
+本節以下為交接當時的狀態，保留作為紀錄：
 
-這件事本來是排在後面的，但討論中發現分歧存在於單次還原作業**內部**（檢查與清空目標資料庫走連線字串、`pg_restore` 走分開欄位），涉及清空資料表這個破壞性動作，所以提前處理。詳見 `issues/06`。
+> ### 已完成並通過驗證
+>
+> **票 06 的擋板部分**已經做完（`Status: resolved`）。內容是：備份與還原收到帶有 `ConnectionString` 的連線設定時直接回傳失敗。
+>
+> 這件事本來是排在後面的，但討論中發現分歧存在於單次還原作業**內部**（檢查與清空目標資料庫走連線字串、`pg_restore` 走分開欄位），涉及清空資料表這個破壞性動作，所以提前處理。詳見 `issues/06`。
+>
+> ### 尚未開始
+>
+> 票 01、02、03 —— 也就是這批工作的主體。全部 `Status: ready-for-agent`。
+>
+> ### 工作區有未提交的變更（重要）
+>
+> 接手時請先跑 `git status`。截至交接時，工作區有兩類未提交的東西：
+>
+> 1. **本批工作產生的** —— `.scratch/client-tool-run/` 整個目錄、`CoreStrings.resx` 與 `CoreStrings.zh-TW.resx` 各兩則新字串、`BackupService.cs` 與 `RestoreService.cs` 的擋板、新增的 `ConnectionStringRejectionTests.cs`、`docs/agents/issue-tracker.md` 的 slug 索引。
+> 2. **不是本批工作產生的** —— `src/PostgresBackup.Wpf/Views/` 底下三個 XAML 檔各有一處版面微調，在本批工作開始之前就已經在工作區裡。
 
-### 尚未開始
+### 完成後的待辦
 
-票 01、02、03 —— 也就是這批工作的主體。全部 `Status: ready-for-agent`。
-
-### 工作區有未提交的變更（重要）
-
-接手時請先跑 `git status`。截至交接時，工作區有兩類未提交的東西：
-
-1. **本批工作產生的** —— `.scratch/client-tool-run/` 整個目錄、`CoreStrings.resx` 與 `CoreStrings.zh-TW.resx` 各兩則新字串、`BackupService.cs` 與 `RestoreService.cs` 的擋板、新增的 `ConnectionStringRejectionTests.cs`、`docs/agents/issue-tracker.md` 的 slug 索引。
-2. **不是本批工作產生的** —— `src/PostgresBackup.Wpf/Views/` 底下三個 XAML 檔（`BackupView`、`RestoreView`、`SettingsView`）各有一處版面微調（`VerticalAlignment="Center"` 之類），在本批工作開始之前就已經在工作區裡。**不是我們改的，提交時要自行決定去留。**
+- **票 07**（新開，`needs-triage`）—— 收攏之後浮現的兩項清理。第一項（`ProcessResult.ErrorMessage` 死碼）已處理；第二項（連線字串守門的落點）待決定。
+- **票 04、05** —— 仍為 `needs-triage`，票裡的待決定問題尚未討論。
+- **票 06 剩餘工作** —— 型別重整，票 01–03 完成後範圍已變小。
+- **計時範圍** —— `spec.md`「實作後補記的行為變化」記載了兩項超出原先預期的行為變化，其中還原耗時不再涵蓋安全快照一項尚未經使用者確認。
 
 ## 3. 怎麼跑
 
 ```
-dotnet build     # 必須 0 警告 0 錯誤
-dotnet test      # 截至交接時 192 個測試全綠（Core 96、CLI 52、WPF 44）
+dotnet build --no-incremental   # 必須 0 警告 0 錯誤
+dotnet test                     # 交接時 192 個全綠；票 01–03 完成後為 213（Core 117、CLI 52、WPF 44）
 ```
 
 **0 警告是硬標準**，不是建議。這個專案先前維持在 0 警告，本批工作也維持住了。
+
+**務必加 `--no-incremental` 才算數。** 增量建置不會重新編譯未變動的檔案，因此不會重新顯示那些檔案既有的警告 —— 本批工作曾因此誤報過一次 0 警告（票 03 引入的兩個 CS8604 被蓋掉）。
 
 若只想跑某個測試類別：
 
