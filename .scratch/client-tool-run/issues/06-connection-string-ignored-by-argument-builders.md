@@ -4,7 +4,7 @@
 
 **Blocked by:** 無
 
-**Status:** resolved（擋板部分）—— 型別重整部分見「剩餘工作」
+**Status:** resolved
 
 **驗證狀態：** 已於 2026-09-20 完成建置與測試驗證。建置 0 警告 0 錯誤；192 個測試全綠（Core 96、CLI 52、WPF 44），其中新增 3 個測試實際執行並通過。
 
@@ -72,9 +72,46 @@ ConnectionString = connStr
 - `ProfileCommand` 與 `SettingsViewModel` 的測試連線維持不變，兩者的連線設定皆來自 `ConnectionProfile`，永遠不含連線字串
 - 使用手冊與 README 未修改：備份與還原本來就沒有連線字串選項，使用者操作介面上沒有任何可見變化
 
-## 剩餘工作
+## 剩餘工作 —— 已完成（2026-09-20，票 01–03 之後）
 
-- [ ] **型別重整：讓「同時填兩種寫法」無法表示。** 目前的守門是在執行期擋下一個型別允許的狀態；更根本的做法是把 `ConnectionSettings` 改成兩種互斥的連線描述方式 —— 分開欄位（備份、還原、檢查皆可用）與完整連線字串（僅檢查可用）。**刻意延後至票 01–03 之後**：屆時兩個參數構建器的連線組裝已收攏進客戶端工具作業，`ToConnectionString()` 的呼叫端也會減少，重整範圍比現在小。
+- [x] **型別重整：讓「同時填兩種寫法」無法表示。**
+
+### 實際做法與原規劃不同
+
+原規劃是把 `ConnectionSettings` 改成兩種互斥的連線描述方式（分開欄位／完整連線字串）。實際查證後採用了更簡單的做法：**直接刪除 `ConnectionSettings.ConnectionString` 欄位。**
+
+理由是該欄位的生命週期只有兩行：
+
+```csharp
+ConnectionString = connStr                                                    // CheckToolsCommand.cs:155
+...
+await detector.CheckCompatibilityAsync(detectionResult, connSettings.ToConnectionString());   // 兩行之後
+```
+
+寫它的只有一處，讀它的只有兩行之後的同一處，而它要餵的 `CheckCompatibilityAsync` 本來就只收一個 `string`。整個欄位的作用僅是讓一個字串繞進物件再繞出來，代價是其餘六個讀 `ConnectionSettings` 的地方從此都得假設它可能藏著指向另一台伺服器的連線字串。
+
+引入互斥型別會保留這個繞路，只是讓它變得型別安全；刪除欄位則讓繞路本身消失。適用「刪除測試」：欄位拿掉之後複雜度是消失，不是搬到別處。
+
+### 連鎖移除
+
+- [x] `ConnectionSettings.ConnectionString` 欄位
+- [x] `ToConnectionString()` 中的連線字串分支（現為無條件依分開欄位產生）
+- [x] `BackupService` 與 `RestoreService` 的兩處執行期守門
+- [x] `Backup_Error_ConnectionStringNotSupported` 與 `Restore_Error_ConnectionStringNotSupported` 兩則資源字串（中英各一份）
+- [x] `ConnectionStringRejectionTests.cs`（3 個測試）—— 它們防的狀態已無法表示
+
+守門與其測試都是撐到型別修好為止的臨時措施，任務結束即撤除。`ConnectionSettings` 上留有 `<remarks>` 記載這段歷史與「若日後真需要接受連線字串，正確做法是讓呼叫端直接持有那個字串」。
+
+### 新增的測試
+
+`-s/--connection-string` 改為直接抵達 `CheckCompatibilityAsync`，此路徑先前無測試，故補上兩個（`test/PostgresBackup.Cli.Tests/CheckToolsCommandTests.cs`）：
+
+- `CheckToolsCommand_WhenConnectionStringGiven_PassesItThroughVerbatim` —— 連線字串原封不動抵達相容性檢查
+- `CheckToolsCommand_WhenBothConnectionStringAndFieldsGiven_ConnectionStringWins` —— 同時給連線字串與分開欄位時的優先序，與移除欄位前一致
+
+### 使用者可見行為
+
+無變化。`-s` 照常運作，備份與還原本來就沒有連線字串入口。
 
 ## Comments
 

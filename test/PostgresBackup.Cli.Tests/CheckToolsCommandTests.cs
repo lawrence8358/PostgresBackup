@@ -185,4 +185,85 @@ public class CheckToolsCommandTests
         Assert.Contains("profiledb", capturedConnString);
         Assert.Contains("profileuser", capturedConnString);
     }
+
+    /// <summary>
+    /// <c>-s</c> 是全專案唯一接受整條連線字串的入口，且只服務相容性檢查。
+    /// 它必須原封不動地抵達 <see cref="IToolDetectionService.CheckCompatibilityAsync"/>，
+    /// 不繞經 <see cref="ConnectionSettings"/> —— 繞經它會讓連線設定同時帶著分開的欄位
+    /// 與一整條連線字串，而備份與還原只讀分開的欄位。
+    /// </summary>
+    [Fact]
+    public async Task CheckToolsCommand_WhenConnectionStringGiven_PassesItThroughVerbatim()
+    {
+        var mockDetector = new Mock<IToolDetectionService>();
+        var foundTools = ToolDetectionResult.CreateFound(
+            @"C:\Program Files\PostgreSQL\16\bin\pg_dump.exe",
+            @"C:\Program Files\PostgreSQL\16\bin\pg_restore.exe",
+            @"C:\Program Files\PostgreSQL\16\bin\psql.exe",
+            new ToolVersion(16, 4),
+            DetectionSource.CommonDirectory);
+
+        mockDetector.Setup(d => d.DetectAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(foundTools);
+
+        string? capturedConnString = null;
+        mockDetector.Setup(d => d.CheckCompatibilityAsync(foundTools, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<ToolDetectionResult, string, CancellationToken>((_, connStr, _) => capturedConnString = connStr)
+            .ReturnsAsync(VersionCheckResult.Compatible(new ToolVersion(16, 4), 16, "16.4"));
+
+        var services = new ServiceCollection();
+        services.AddSingleton(mockDetector.Object);
+        services.AddSingleton(new Mock<IConnectionProfileRepository>().Object);
+        var sp = services.BuildServiceProvider();
+
+        var root = new RootCommand { CheckToolsCommand.Create(sp) };
+
+        const string connectionString = "Host=db-b;Port=6543;Database=otherdb;Username=someone";
+        int exitCode = await root
+            .Parse(new[] { "check-tools", "-s", connectionString })
+            .InvokeAsync(new InvocationConfiguration(), CancellationToken.None);
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal(connectionString, capturedConnString);
+    }
+
+    /// <summary>
+    /// 同時給了 <c>-s</c> 與分開的欄位時，連線字串優先 —— 沿用移除
+    /// <c>ConnectionSettings.ConnectionString</c> 之前的優先序。
+    /// </summary>
+    [Fact]
+    public async Task CheckToolsCommand_WhenBothConnectionStringAndFieldsGiven_ConnectionStringWins()
+    {
+        var mockDetector = new Mock<IToolDetectionService>();
+        var foundTools = ToolDetectionResult.CreateFound(
+            @"C:\Program Files\PostgreSQL\16\bin\pg_dump.exe",
+            @"C:\Program Files\PostgreSQL\16\bin\pg_restore.exe",
+            @"C:\Program Files\PostgreSQL\16\bin\psql.exe",
+            new ToolVersion(16, 4),
+            DetectionSource.CommonDirectory);
+
+        mockDetector.Setup(d => d.DetectAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(foundTools);
+
+        string? capturedConnString = null;
+        mockDetector.Setup(d => d.CheckCompatibilityAsync(foundTools, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<ToolDetectionResult, string, CancellationToken>((_, connStr, _) => capturedConnString = connStr)
+            .ReturnsAsync(VersionCheckResult.Compatible(new ToolVersion(16, 4), 16, "16.4"));
+
+        var services = new ServiceCollection();
+        services.AddSingleton(mockDetector.Object);
+        services.AddSingleton(new Mock<IConnectionProfileRepository>().Object);
+        var sp = services.BuildServiceProvider();
+
+        var root = new RootCommand { CheckToolsCommand.Create(sp) };
+
+        const string connectionString = "Host=db-b;Port=6543;Database=otherdb;Username=someone";
+        int exitCode = await root
+            .Parse(new[] { "check-tools", "-s", connectionString, "-H", "db-a", "-d", "mydb" })
+            .InvokeAsync(new InvocationConfiguration(), CancellationToken.None);
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal(connectionString, capturedConnString);
+        Assert.DoesNotContain("db-a", capturedConnString);
+    }
 }

@@ -4,14 +4,14 @@
 
 **Blocked by:** 01, 02, 03（皆已 resolved）
 
-**Status:** needs-triage
+**Status:** resolved
 
-> 第一項已處理（見下）。第二項需先決定走哪條路，故本票維持 `needs-triage`。
+> 兩項皆已處理。第二項採乙案，隨票 06 的剩餘工作一併解決。
 
 ## 要做的事
 
 - [x] 刪除已成死碼的 `ProcessResult.ErrorMessage`
-- [ ] 決定連線字串守門的落點（下沉至 `ClientToolRun`，或併入票 06 的剩餘工作）
+- [x] 決定連線字串守門的落點 —— 採乙案，守門連同 `ConnectionSettings.ConnectionString` 欄位一併移除（見票 06）
 
 ## 一、`ProcessResult.ErrorMessage` 已成死碼 — 已處理
 
@@ -27,7 +27,7 @@ spec 的 Problem Statement「後果三」正是在講這個屬性誘發的死碼
 
 **處置：直接刪除**，並在 `ProcessResult` 上留下一段 `<remarks>` 記載它為何不該再被加回來。判斷依據：零呼叫端、本方案為單一應用程式而非函式庫、無外部相依，且留著等於留一個會誘發同一個錯誤的陷阱。
 
-## 二、連線字串守門住在不變式的上一層 — 待決定
+## 二、連線字串守門住在不變式的上一層 — 已處理（採乙案）
 
 票 06 的守門目前各寫一份於 `BackupService.BackupAsync` 與 `RestoreService.RestoreAsync` 的第 0 步：
 
@@ -42,7 +42,9 @@ if (!string.IsNullOrWhiteSpace(options.Connection.ConnectionString)) { ... }
 - **甲案** —— 守門下沉至 `ClientToolRun`（訊息資源鍵由 request 帶入）。代價：既有的 `ConnectionStringRejectionTests` 兩個「守門發生在工具偵測與處理序執行之前」的斷言必須改寫，因為屆時守門會發生在偵測之後。這會讓守門變晚，而還原路徑的價值有一部分正是「在碰到目標資料庫之前就擋下來」。
 - **乙案** —— 併入票 06 的剩餘工作：把 `ConnectionSettings` 改為兩種互斥的連線描述方式，使該狀態在型別上無法表示，屆時兩處守門與本項一併消失。
 
-乙案較根本，且不必犧牲守門的時機。若採乙案，本項可併入票 06 關閉。
+**採乙案，且比原先設想的更徹底。** 查證後發現 `ConnectionString` 欄位只有一個寫入點與一個讀取點，且兩者相隔兩行，因此不需要引入互斥型別 —— 直接刪除該欄位即可。守門、其資源字串與其測試隨之全部移除，本項與票 06 的剩餘工作一併關閉。詳見票 06 的「剩餘工作」一節。
+
+甲案未採用，因為它會讓守門發生在工具偵測之後（變晚），而還原路徑的價值有一部分正是「在碰到目標資料庫之前就擋下來」。乙案連守門都不需要，不必做這個取捨。
 
 ## 來源
 

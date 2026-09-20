@@ -145,17 +145,22 @@ public static class CheckToolsCommand
 
             if (shouldCheckServer && detectionResult.IsReady)
             {
-                var connSettings = new ConnectionSettings
-                {
-                    Host = host ?? profileConnSettings?.Host ?? "localhost",
-                    Port = port ?? profileConnSettings?.Port ?? 5432,
-                    Database = database ?? profileConnSettings?.Database ?? "postgres",
-                    Username = username ?? profileConnSettings?.Username ?? "postgres",
-                    Password = password ?? profileConnSettings?.Password,
-                    ConnectionString = connStr
-                };
+                // -s/--connection-string 直接交給相容性檢查，不繞經 ConnectionSettings。
+                // 繞經它會讓連線設定同時帶著「分開的欄位」與「一整條連線字串」，而備份與
+                // 還原只讀分開的欄位 —— 兩者若指向不同伺服器，後果是清空一台、寫入另一台。
+                // 此處是全專案唯一接受連線字串的入口，且它本來就只需要一個字串。
+                var connectionString = !string.IsNullOrWhiteSpace(connStr)
+                    ? connStr
+                    : new ConnectionSettings
+                    {
+                        Host = host ?? profileConnSettings?.Host ?? "localhost",
+                        Port = port ?? profileConnSettings?.Port ?? 5432,
+                        Database = database ?? profileConnSettings?.Database ?? "postgres",
+                        Username = username ?? profileConnSettings?.Username ?? "postgres",
+                        Password = password ?? profileConnSettings?.Password
+                    }.ToConnectionString();
 
-                versionCheck = await detector.CheckCompatibilityAsync(detectionResult, connSettings.ToConnectionString());
+                versionCheck = await detector.CheckCompatibilityAsync(detectionResult, connectionString);
             }
 
             if (asJson)
