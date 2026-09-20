@@ -46,7 +46,7 @@
                         <TextBlock Text="{Binding StatusBadgeText}" Foreground="White"
                                    FontSize="11" FontWeight="SemiBold"/>
                     </Border>
-                    <Grid Grid.Column="1" Margin="12,0,0,0">
+                    <Grid Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
