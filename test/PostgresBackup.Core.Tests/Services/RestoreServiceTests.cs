@@ -1,3 +1,4 @@
+using System.Text;
 using PostgresBackup.Core.Interfaces;
 using PostgresBackup.Core.Models;
 using PostgresBackup.Core.Services;
@@ -41,16 +42,10 @@ public class RestoreServiceTests
                     return Task.FromResult(new ProcessResult(1, string.Empty, "Snapshot dump crashed"));
                 }
                 // 模擬建立快照檔案
-                var fileArgIndex = arguments.IndexOf("-f \"", StringComparison.Ordinal);
-                if (fileArgIndex >= 0)
+                var snapshotPath = ValueAfter(arguments, "-f");
+                if (snapshotPath is not null)
                 {
-                    var pathStart = fileArgIndex + 4;
-                    var pathEnd = arguments.IndexOf("\"", pathStart, StringComparison.Ordinal);
-                    if (pathEnd > pathStart)
-                    {
-                        var path = arguments.Substring(pathStart, pathEnd - pathStart);
-                        File.WriteAllText(path, "MOCK SNAPSHOT");
-                    }
+                    File.WriteAllText(snapshotPath, "MOCK SNAPSHOT");
                 }
                 return Task.FromResult(new ProcessResult(0, "Snapshot ok", string.Empty));
             }
@@ -63,14 +58,11 @@ public class RestoreServiceTests
 
             if (executable.Contains("pg_restore", StringComparison.OrdinalIgnoreCase))
             {
-                const string marker = "--use-list \"";
-                var listStart = arguments.IndexOf(marker, StringComparison.Ordinal);
-                if (listStart >= 0)
+                var listPath = ValueAfter(arguments, "--use-list");
+                if (listPath is not null)
                 {
-                    listStart += marker.Length;
-                    var listEnd = arguments.IndexOf('"', listStart);
-                    CapturedRestoreListPath = arguments[listStart..listEnd];
-                    CapturedRestoreListContent = File.ReadAllText(CapturedRestoreListPath);
+                    CapturedRestoreListPath = listPath;
+                    CapturedRestoreListContent = File.ReadAllText(listPath);
                 }
             }
 
@@ -81,6 +73,61 @@ public class RestoreServiceTests
             }
 
             return Task.FromResult(new ProcessResult(0, "Restore completed successfully", string.Empty));
+        }
+
+        /// <summary>
+        /// 取出 <paramref name="flag"/> 之後那個 argv 元素的原始值。
+        ///
+        /// 替身實作的是 <see cref="IProcessRunner"/>，位於拼接之後，因此只拿得到命令列
+        /// 字串。拼接規則只對「需要引號的值」加引號，所以路徑帶不帶引號取決於它含不含
+        /// 空白 —— 暫存目錄兩種情形都可能出現，故此處把命令列完整拆回 argv 而非比對前綴。
+        /// </summary>
+        private static string? ValueAfter(string commandLine, string flag)
+        {
+            var argv = SplitArguments(commandLine);
+            var index = argv.IndexOf(flag);
+            return index >= 0 && index + 1 < argv.Count ? argv[index + 1] : null;
+        }
+
+        private static List<string> SplitArguments(string commandLine)
+        {
+            var argv = new List<string>();
+            var current = new StringBuilder();
+            var inQuotes = false;
+            var started = false;
+
+            for (var i = 0; i < commandLine.Length; i++)
+            {
+                var c = commandLine[i];
+                if (c == '\\' && i + 1 < commandLine.Length && commandLine[i + 1] == '"')
+                {
+                    current.Append('"');
+                    i++;
+                    started = true;
+                }
+                else if (c == '"')
+                {
+                    inQuotes = !inQuotes;
+                    started = true;
+                }
+                else if (char.IsWhiteSpace(c) && !inQuotes)
+                {
+                    if (started)
+                    {
+                        argv.Add(current.ToString());
+                        current.Clear();
+                        started = false;
+                    }
+                }
+                else
+                {
+                    current.Append(c);
+                    started = true;
+                }
+            }
+
+            if (started) argv.Add(current.ToString());
+            return argv;
         }
     }
 
@@ -142,7 +189,7 @@ public class RestoreServiceTests
             var runner = new TestProcessRunner { FailSnapshot = true };
             var detector = new TestToolDetector();
             var historyRepo = new SqliteBackupHistoryRepository(":memory:");
-            var backupService = new BackupService(runner, detector, historyRepo);
+            var backupService = new BackupService(new ClientToolRun(runner, historyRepo), detector);
             var service = new RestoreService(runner, detector, backupService, historyRepo);
 
             var options = new RestoreOptions
@@ -192,7 +239,7 @@ public class RestoreServiceTests
             var runner = new TestProcessRunner { FailSnapshot = false, FailRestore = false };
             var detector = new TestToolDetector();
             var historyRepo = new SqliteBackupHistoryRepository(":memory:");
-            var backupService = new BackupService(runner, detector, historyRepo);
+            var backupService = new BackupService(new ClientToolRun(runner, historyRepo), detector);
             var service = new RestoreService(runner, detector, backupService, historyRepo);
 
             var options = new RestoreOptions
@@ -413,7 +460,7 @@ public class RestoreServiceTests
             catalog.ForeignKeyDependencies.Add(new RestoreForeignKeyDependency(child, parent));
             var dataPreparation = new TestDataPreparationService(runner);
             var detector = new TestToolDetector();
-            var backupService = new BackupService(runner, detector);
+            var backupService = new BackupService(new ClientToolRun(runner), detector);
             var service = new RestoreService(
                 runner,
                 detector,

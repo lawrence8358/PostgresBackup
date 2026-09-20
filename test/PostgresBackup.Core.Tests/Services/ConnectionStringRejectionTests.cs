@@ -34,7 +34,7 @@ public class ConnectionStringRejectionTests
         var runner = new Mock<IProcessRunner>(MockBehavior.Strict);
         var detector = new Mock<IToolDetectionService>(MockBehavior.Strict);
 
-        var service = new BackupService(runner.Object, detector.Object);
+        var service = new BackupService(new ClientToolRun(runner.Object), detector.Object);
 
         var result = await service.BackupAsync(new BackupOptions
         {
@@ -107,7 +107,7 @@ public class ConnectionStringRejectionTests
             .Setup(d => d.DetectAsync(It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ToolDetectionResult { Status = ToolStatus.NotFound });
 
-        var service = new BackupService(new Mock<IProcessRunner>().Object, detector.Object);
+        var service = new BackupService(new ClientToolRun(new Mock<IProcessRunner>().Object), detector.Object);
 
         var result = await service.BackupAsync(new BackupOptions
         {

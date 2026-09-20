@@ -55,6 +55,7 @@ public static class Program
                 sp.GetRequiredService<MachineScopedStoreLocation>()));
         services.AddSingleton<IPasswordReader, ConsolePasswordReader>();
         services.AddSingleton<IBackupHistoryRepository, SqliteBackupHistoryRepository>();
+        services.AddSingleton<ClientToolRun>();
         services.AddSingleton<IBackupService, BackupService>();
         services.AddSingleton<IRestoreService, RestoreService>();
 

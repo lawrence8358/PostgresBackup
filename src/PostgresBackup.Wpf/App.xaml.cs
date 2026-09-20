@@ -30,6 +30,7 @@ public partial class App : Application
         services.AddSingleton<ICredentialStorage, WindowsCredentialStorage>();
         services.AddSingleton<IConnectionProfileRepository, JsonConnectionProfileRepository>();
         services.AddSingleton<IBackupHistoryRepository, SqliteBackupHistoryRepository>();
+        services.AddSingleton<ClientToolRun>();
         services.AddSingleton<IBackupService, BackupService>();
         services.AddSingleton<IRestoreService, RestoreService>();
 

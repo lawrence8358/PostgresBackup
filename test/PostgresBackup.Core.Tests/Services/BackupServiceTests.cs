@@ -97,7 +97,7 @@ public class BackupServiceTests
         {
             var fakeRunner = new FakeProcessRunner();
             var fakeDetector = new FakeToolDetector();
-            var service = new BackupService(fakeRunner, fakeDetector);
+            var service = new BackupService(new ClientToolRun(fakeRunner), fakeDetector);
 
             var options = new BackupOptions
             {
@@ -150,7 +150,7 @@ public class BackupServiceTests
                 CreateFileOnRun = false
             };
             var fakeDetector = new FakeToolDetector();
-            var service = new BackupService(fakeRunner, fakeDetector);
+            var service = new BackupService(new ClientToolRun(fakeRunner), fakeDetector);
 
             var options = new BackupOptions
             {
@@ -178,7 +178,7 @@ public class BackupServiceTests
     {
         var fakeRunner = new FakeProcessRunner();
         var fakeDetector = new FakeToolDetector { ResultToReturn = ToolDetectionResult.CreateNotFound() };
-        var service = new BackupService(fakeRunner, fakeDetector);
+        var service = new BackupService(new ClientToolRun(fakeRunner), fakeDetector);
 
         var options = new BackupOptions();
         var result = await service.BackupAsync(options);

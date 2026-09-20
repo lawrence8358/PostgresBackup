@@ -4,18 +4,18 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 ## 要做的事
 
-- [ ] `BackupArgumentsBuilder.Build` 回傳型別由 `string` 改為 `IReadOnlyList<string>`，移除其私有 `Escape`
-- [ ] 產出的清單**不含**連線參數（`-h`、`-p`、`-U`、`-d`），那部分由客戶端工具作業補上
-- [ ] `BackupService` 注入並使用客戶端工具作業，移除其中的環境變數區塊、`Stopwatch`、離開碼判定、錯誤訊息擷取、兩段 `AddRecordAsync`
-- [ ] `BackupService` 保留：客戶端工具偵測、輸出目錄預設值與建立、`GetTargetFilePath`、產出檔案存在判定、`FormatBytes`、開頭四行記錄、`BackupResult` 轉換
-- [ ] 更新 `App.xaml.cs` 與 `Program.cs` 的相依註冊
-- [ ] 改寫 `BackupArgumentsBuilderTests` 的 4 個測試，斷言對象改為 argv 清單
-- [ ] 調整 `BackupServiceTests` 的 3 個測試與 `FakeProcessRunner` 的參數擷取
-- [ ] `dotnet build` 與 `dotnet test` 全綠
+- [x] `BackupArgumentsBuilder.Build` 回傳型別由 `string` 改為 `IReadOnlyList<string>`，移除其私有 `Escape`
+- [x] 產出的清單**不含**連線參數（`-h`、`-p`、`-U`、`-d`），那部分由客戶端工具作業補上
+- [x] `BackupService` 注入並使用客戶端工具作業，移除其中的環境變數區塊、`Stopwatch`、離開碼判定、錯誤訊息擷取、兩段 `AddRecordAsync`
+- [x] `BackupService` 保留：客戶端工具偵測、輸出目錄預設值與建立、`GetTargetFilePath`、產出檔案存在判定、`FormatBytes`、開頭四行記錄、`BackupResult` 轉換
+- [x] 更新 `App.xaml.cs` 與 `Program.cs` 的相依註冊
+- [x] 改寫 `BackupArgumentsBuilderTests` 的 4 個測試，斷言對象改為 argv 清單
+- [x] 調整 `BackupServiceTests` 的 3 個測試與 `FakeProcessRunner` 的參數擷取
+- [x] `dotnet build` 與 `dotnet test` 全綠
 
 ## 受影響的既有測試
 

@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using PostgresBackup.Core.Interfaces;
 using PostgresBackup.Core.Models;
 
@@ -7,22 +6,22 @@ using PostgresBackup.Core.Resources;
 namespace PostgresBackup.Core.Services;
 
 /// <summary>
-/// 實作 PostgreSQL 備份作業服務
+/// 實作 PostgreSQL 備份作業服務。
+///
+/// 工具執行、環境變數、計時、成敗判定與紀錄寫入全數委由客戶端工具作業，
+/// 此處只保留備份專屬的責任：客戶端工具偵測、輸出目錄、產出檔案存在判定與結果轉換。
 /// </summary>
 public class BackupService : IBackupService
 {
-    private readonly IProcessRunner _processRunner;
+    private readonly ClientToolRun _clientToolRun;
     private readonly IToolDetectionService _toolDetector;
-    private readonly IBackupHistoryRepository? _historyRepo;
 
     public BackupService(
-        IProcessRunner processRunner,
-        IToolDetectionService toolDetector,
-        IBackupHistoryRepository? historyRepo = null)
+        ClientToolRun clientToolRun,
+        IToolDetectionService toolDetector)
     {
-        _processRunner = processRunner;
+        _clientToolRun = clientToolRun;
         _toolDetector = toolDetector;
-        _historyRepo = historyRepo;
     }
 
     public async Task<BackupResult> BackupAsync(
@@ -41,8 +40,6 @@ public class BackupService : IBackupService
             onLogLine?.Invoke($"[ERROR] {errMsg}");
             return BackupResult.Failure(errMsg, -1, TimeSpan.Zero, string.Empty);
         }
-
-        var stopwatch = Stopwatch.StartNew();
 
         // 1. 驗證與解析客戶端工具路徑
         var detection = await _toolDetector.DetectAsync(options.ClientToolDirectory, ct);
@@ -68,7 +65,7 @@ public class BackupService : IBackupService
             Directory.CreateDirectory(options.OutputDirectory);
         }
 
-        // 3. 計算輸出檔案路徑與命令參數
+        // 3. 計算輸出檔案路徑與作業專屬參數
         var targetFilePath = options.GetTargetFilePath();
         var arguments = BackupArgumentsBuilder.Build(options, targetFilePath);
 
@@ -77,110 +74,53 @@ public class BackupService : IBackupService
         onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Backup_Log_OutputPath", targetFilePath)}");
         onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Backup_Log_Tool", pgDumpPath)}");
 
-        // 4. 執行 pg_dump 並串流捕獲標準輸出與錯誤輸出
-        var envVars = new Dictionary<string, string?>();
-        if (!string.IsNullOrEmpty(options.Connection.Password))
-        {
-            envVars["PGPASSWORD"] = options.Connection.Password;
-        }
-        // Keep dump data encoding explicit; diagnostic messages are forced to the C locale below.
-        envVars["PGCLIENTENCODING"] = "UTF8";
-        // Keep localized Windows messages from being emitted in an unknown code page.
-        envVars["LC_ALL"] = "C";
-        envVars["LC_MESSAGES"] = "C";
-        envVars["LANG"] = "C";
-        envVars["LANGUAGE"] = null;
-
-        var processResult = await _processRunner.RunAsync(
-            pgDumpPath,
-            arguments,
-            envVars,
-            onOutputLine: line => onLogLine?.Invoke($"[pg_dump] {line}"),
-            onErrorLine: line => onLogLine?.Invoke($"[pg_dump] {line}"),
-            ct: ct);
-
-        stopwatch.Stop();
-
-        // 5. 評估執行結果並寫入歷史稽核紀錄
-        if (processResult.ExitCode == 0 && File.Exists(targetFilePath))
-        {
-            var fileInfo = new FileInfo(targetFilePath);
-            var size = fileInfo.Length;
-
-            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [SUCCESS] {CoreStrings.Get("Backup_Log_Success")}");
-            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Backup_Log_FileInfo", FormatBytes(size), CoreStrings.Format("Format_DurationSeconds", stopwatch.Elapsed.TotalSeconds.ToString("F2")))}");
-
-            if (_historyRepo != null)
+        // 4. 執行一次客戶端工具作業
+        var run = await _clientToolRun.RunAsync(
+            new ClientToolRunRequest
             {
-                try
-                {
-                    await _historyRepo.AddRecordAsync(new BackupRecord
-                    {
-                        Timestamp = DateTimeOffset.UtcNow,
-                        OperationType = options.OperationType,
-                        DatabaseName = options.Connection.Database,
-                        FilePath = targetFilePath,
-                        Format = options.Format,
-                        FileSizeBytes = size,
-                        DurationMs = (long)stopwatch.Elapsed.TotalMilliseconds,
-                        Status = BackupStatus.Success,
-                        Arguments = arguments
-                    }, ct);
-                }
-                catch (Exception ex)
-                {
-                    onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [WARNING] {CoreStrings.Format("Backup_Log_HistoryWriteFailed", ex.Message)}");
-                }
-            }
+                ExecutablePath = pgDumpPath,
+                Arguments = arguments,
+                Connection = options.Connection,
+                LogPrefix = "pg_dump",
+                NonZeroExitErrorKey = "Backup_Error_NonZeroExit",
+                OperationType = options.OperationType,
+                RecordedFilePath = targetFilePath,
+                RecordedFormat = options.Format,
+                // 離開碼為零仍不足以稱為成功：備份檔沒有落地就不是一份備份。
+                ConfirmSuccess = () => File.Exists(targetFilePath),
+                MeasureRecordedFileSize = succeeded =>
+                    succeeded ? new FileInfo(targetFilePath).Length : 0
+            },
+            onLogLine,
+            ct);
+
+        // 5. 轉換為備份作業結果
+        if (run.IsSuccess)
+        {
+            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [SUCCESS] {CoreStrings.Get("Backup_Log_Success")}");
+            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Backup_Log_FileInfo", FormatBytes(run.RecordedFileSizeBytes), CoreStrings.Format("Format_DurationSeconds", run.Elapsed.TotalSeconds.ToString("F2")))}");
 
             return BackupResult.Success(
                 targetFilePath,
-                size,
-                stopwatch.Elapsed,
-                arguments,
+                run.RecordedFileSizeBytes,
+                run.Elapsed,
+                run.CommandLine,
                 options.Format);
         }
-        else
+
+        onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [ERROR] {CoreStrings.Format("Backup_Log_Failed", run.ExitCode)}");
+        if (!string.IsNullOrWhiteSpace(run.ErrorMessage))
         {
-            var err = !string.IsNullOrWhiteSpace(processResult.StandardError)
-                ? processResult.StandardError
-                : processResult.ErrorMessage ?? CoreStrings.Get("Backup_Error_NonZeroExit");
-
-            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [ERROR] {CoreStrings.Format("Backup_Log_Failed", processResult.ExitCode)}");
-            if (!string.IsNullOrWhiteSpace(err))
-            {
-                onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Backup_Log_ErrorDetail", err)}");
-            }
-
-            if (_historyRepo != null)
-            {
-                try
-                {
-                    await _historyRepo.AddRecordAsync(new BackupRecord
-                    {
-                        Timestamp = DateTimeOffset.UtcNow,
-                        OperationType = options.OperationType,
-                        DatabaseName = options.Connection.Database,
-                        FilePath = targetFilePath,
-                        Format = options.Format,
-                        FileSizeBytes = 0,
-                        DurationMs = (long)stopwatch.Elapsed.TotalMilliseconds,
-                        Status = BackupStatus.Failed,
-                        ErrorMessage = err,
-                        Arguments = arguments
-                    }, ct);
-                }
-                catch { }
-            }
-
-            return BackupResult.Failure(
-                err,
-                processResult.ExitCode,
-                stopwatch.Elapsed,
-                arguments,
-                targetFilePath,
-                options.Format);
+            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Backup_Log_ErrorDetail", run.ErrorMessage)}");
         }
+
+        return BackupResult.Failure(
+            run.ErrorMessage,
+            run.ExitCode,
+            run.Elapsed,
+            run.CommandLine,
+            targetFilePath,
+            options.Format);
     }
 
     private static string FormatBytes(long bytes)
