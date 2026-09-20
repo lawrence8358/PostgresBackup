@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using PostgresBackup.Core.Interfaces;
 using PostgresBackup.Core.Models;
 
@@ -7,29 +6,30 @@ using PostgresBackup.Core.Resources;
 namespace PostgresBackup.Core.Services;
 
 /// <summary>
-/// 實作安全還原作業服務，具備還原前強制安全快照防護與阻斷機制
+/// 實作安全還原作業服務，具備還原前強制安全快照防護與阻斷機制。
+///
+/// 工具執行、環境變數、計時、成敗判定與紀錄寫入全數委由客戶端工具作業，
+/// 此處只保留還原專屬的責任：工具挑選、格式推斷、計畫產出與驗證、暫存清單檔的
+/// 生命週期、安全快照協調與結果轉換。
 /// </summary>
 public class RestoreService : IRestoreService
 {
-    private readonly IProcessRunner _processRunner;
+    private readonly ClientToolRun _clientToolRun;
     private readonly IToolDetectionService _toolDetector;
     private readonly IBackupService? _backupService;
-    private readonly IBackupHistoryRepository? _historyRepo;
     private readonly IRestoreTargetCatalogReader _catalogReader;
     private readonly IRestoreDataPreparationService _dataPreparationService;
 
     public RestoreService(
-        IProcessRunner processRunner,
+        ClientToolRun clientToolRun,
         IToolDetectionService toolDetector,
         IBackupService? backupService = null,
-        IBackupHistoryRepository? historyRepo = null,
         IRestoreTargetCatalogReader? catalogReader = null,
         IRestoreDataPreparationService? dataPreparationService = null)
     {
-        _processRunner = processRunner;
+        _clientToolRun = clientToolRun;
         _toolDetector = toolDetector;
         _backupService = backupService;
-        _historyRepo = historyRepo;
         _catalogReader = catalogReader ?? new NpgsqlRestoreTargetCatalogReader();
         _dataPreparationService = dataPreparationService ?? new NpgsqlRestoreDataPreparationService();
     }
@@ -50,8 +50,6 @@ public class RestoreService : IRestoreService
             onLogLine?.Invoke($"[ERROR] {errMsg}");
             return RestoreResult.Failure(errMsg, -1, TimeSpan.Zero, string.Empty);
         }
-
-        var stopwatch = Stopwatch.StartNew();
 
         // 1. 驗證來源檔案是否存在
         if (!File.Exists(options.SourceFilePath))
@@ -92,7 +90,6 @@ public class RestoreService : IRestoreService
             ? options.TargetDatabase
             : options.Connection.Database;
 
-        var envVars = BuildEnvironmentVariables(options.Connection.Password);
         RestoreArchivePlan? restorePlan = null;
         RestoreDataPlan? dataPlan = null;
 
@@ -105,19 +102,20 @@ public class RestoreService : IRestoreService
                 ? "Restore_Log_PlanStart"
                 : "Restore_Log_DataPlanStart";
             onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Get(planLogKey)}");
-            var listArgs = $"--list \"{EscapeArgument(options.SourceFilePath)}\"";
-            var listResult = await _processRunner.RunAsync(
+            // 封存目錄的讀取是唯讀探查：沿用同一套環境變數與拼接規則，但不留下紀錄。
+            var listResult = await _clientToolRun.ProbeAsync(
                 toolExecutablePath,
-                listArgs,
-                envVars,
-                ct: ct);
+                ["--list", options.SourceFilePath],
+                options.Connection,
+                "Restore_Error_NonZeroExit",
+                ct);
 
-            if (!listResult.Success)
+            if (!listResult.IsSuccess)
             {
-                var detail = listResult.ErrorMessage ?? CoreStrings.Get("Restore_Error_NonZeroExit");
-                var errMsg = CoreStrings.Format("Restore_Error_ArchiveListFailed", detail);
+                var errMsg = CoreStrings.Format("Restore_Error_ArchiveListFailed", listResult.ErrorMessage);
                 onLogLine?.Invoke($"[ERROR] {errMsg}");
-                return RestoreResult.Failure(errMsg, listResult.ExitCode, stopwatch.Elapsed, listArgs);
+                return RestoreResult.Failure(
+                    errMsg, listResult.ExitCode, listResult.Elapsed, listResult.CommandLine);
             }
 
             try
@@ -131,7 +129,7 @@ public class RestoreService : IRestoreService
                         var descriptions = string.Join(", ", restorePlan.UnsupportedDescriptions);
                         var errMsg = CoreStrings.Format("Restore_Error_UnsupportedArchiveEntries", descriptions);
                         onLogLine?.Invoke($"[ERROR] {errMsg}");
-                        return RestoreResult.Failure(errMsg, -1, stopwatch.Elapsed, listArgs);
+                        return RestoreResult.Failure(errMsg, -1, listResult.Elapsed, listResult.CommandLine);
                     }
 
                     onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format(
@@ -148,7 +146,7 @@ public class RestoreService : IRestoreService
                         var descriptions = string.Join(", ", dataPlan.UnsupportedDescriptions);
                         var errMsg = CoreStrings.Format("Restore_Error_UnsupportedDataEntries", descriptions);
                         onLogLine?.Invoke($"[ERROR] {errMsg}");
-                        return RestoreResult.Failure(errMsg, -1, stopwatch.Elapsed, listArgs);
+                        return RestoreResult.Failure(errMsg, -1, listResult.Elapsed, listResult.CommandLine);
                     }
 
                     if (dataPlan.MissingObjects.Count > 0)
@@ -156,7 +154,7 @@ public class RestoreService : IRestoreService
                         var objects = string.Join(", ", dataPlan.MissingObjects);
                         var errMsg = CoreStrings.Format("Restore_Error_DataTargetsMissing", objects);
                         onLogLine?.Invoke($"[ERROR] {errMsg}");
-                        return RestoreResult.Failure(errMsg, -1, stopwatch.Elapsed, listArgs);
+                        return RestoreResult.Failure(errMsg, -1, listResult.Elapsed, listResult.CommandLine);
                     }
 
                     if (dataPlan.CyclicTables.Count > 0)
@@ -164,7 +162,7 @@ public class RestoreService : IRestoreService
                         var tables = string.Join(", ", dataPlan.CyclicTables);
                         var errMsg = CoreStrings.Format("Restore_Error_DataDependencyCycle", tables);
                         onLogLine?.Invoke($"[ERROR] {errMsg}");
-                        return RestoreResult.Failure(errMsg, -1, stopwatch.Elapsed, listArgs);
+                        return RestoreResult.Failure(errMsg, -1, listResult.Elapsed, listResult.CommandLine);
                     }
 
                     onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format(
@@ -181,7 +179,7 @@ public class RestoreService : IRestoreService
             {
                 var errMsg = CoreStrings.Format("Restore_Error_PlanFailed", ex.Message);
                 onLogLine?.Invoke($"[ERROR] {errMsg}");
-                return RestoreResult.Failure(errMsg, -1, stopwatch.Elapsed, listArgs);
+                return RestoreResult.Failure(errMsg, -1, listResult.Elapsed, listResult.CommandLine);
             }
         }
 
@@ -227,7 +225,7 @@ public class RestoreService : IRestoreService
             {
                 var errMsg = CoreStrings.Get("Restore_Error_SnapshotServiceMissing");
                 onLogLine?.Invoke($"[CRITICAL ABORT] {errMsg}");
-                return RestoreResult.Failure(errMsg, -1, stopwatch.Elapsed, string.Empty);
+                return RestoreResult.Failure(errMsg, -1, TimeSpan.Zero, string.Empty);
             }
 
             var snapshotResult = await _backupService.BackupAsync(
@@ -242,7 +240,7 @@ public class RestoreService : IRestoreService
                     snapshotResult.ExitCode,
                     snapshotResult.ErrorMessage ?? CoreStrings.Get("Restore_Error_SnapshotFileMissing"));
                 onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [CRITICAL ABORT] {errMsg}");
-                return RestoreResult.Failure(errMsg, snapshotResult.ExitCode, stopwatch.Elapsed, snapshotResult.Arguments);
+                return RestoreResult.Failure(errMsg, snapshotResult.ExitCode, snapshotResult.Duration, snapshotResult.Arguments);
             }
 
             snapshotFilePath = snapshotResult.OutputFilePath;
@@ -269,7 +267,7 @@ public class RestoreService : IRestoreService
                 DeleteRestoreListFile(restoreListFilePath);
                 var errMsg = CoreStrings.Format("Restore_Error_PlanFailed", ex.Message);
                 onLogLine?.Invoke($"[ERROR] {errMsg}");
-                return RestoreResult.Failure(errMsg, -1, stopwatch.Elapsed, string.Empty, snapshotFilePath);
+                return RestoreResult.Failure(errMsg, -1, TimeSpan.Zero, string.Empty, snapshotFilePath);
             }
         }
 
@@ -292,7 +290,7 @@ public class RestoreService : IRestoreService
                 DeleteRestoreListFile(restoreListFilePath);
                 var errMsg = CoreStrings.Format("Restore_Error_DataClearFailed", ex.Message);
                 onLogLine?.Invoke($"[ERROR] {errMsg}");
-                return RestoreResult.Failure(errMsg, -1, stopwatch.Elapsed, string.Empty, snapshotFilePath);
+                return RestoreResult.Failure(errMsg, -1, TimeSpan.Zero, string.Empty, snapshotFilePath);
             }
         }
 
@@ -304,16 +302,26 @@ public class RestoreService : IRestoreService
         onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Restore_Log_SourceFile", options.SourceFilePath)}");
         onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Restore_Log_Mode", options.Mode)}");
 
-        ProcessResult restoreProc;
+        ClientToolRunResult run;
         try
         {
-            restoreProc = await _processRunner.RunAsync(
-                toolExecutablePath,
-                restoreArgs,
-                envVars,
-                onOutputLine: line => onLogLine?.Invoke($"[{toolNameDisplay}] {line}"),
-                onErrorLine: line => onLogLine?.Invoke($"[{toolNameDisplay}] {line}"),
-                ct: ct);
+            run = await _clientToolRun.RunAsync(
+                new ClientToolRunRequest
+                {
+                    ExecutablePath = toolExecutablePath,
+                    Arguments = restoreArgs,
+                    Connection = options.Connection,
+                    TargetDatabase = targetDb,
+                    LogPrefix = toolNameDisplay,
+                    NonZeroExitErrorKey = "Restore_Error_NonZeroExit",
+                    OperationType = BackupOperationType.Restore,
+                    RecordedFilePath = options.SourceFilePath,
+                    RecordedFormat = options.Format,
+                    // 還原紀錄的檔案大小是來源檔，不是產出檔，成敗兩種情形皆然。
+                    MeasureRecordedFileSize = _ => new FileInfo(options.SourceFilePath).Length
+                },
+                onLogLine,
+                ct);
         }
         finally
         {
@@ -323,85 +331,17 @@ public class RestoreService : IRestoreService
             }
         }
 
-        stopwatch.Stop();
-
-        if (restoreProc.ExitCode == 0)
+        // 5. 轉換為還原作業結果
+        if (run.IsSuccess)
         {
-            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [SUCCESS] {CoreStrings.Format("Restore_Log_Success", CoreStrings.Format("Format_DurationSeconds", stopwatch.Elapsed.TotalSeconds.ToString("F2")))}");
-
-            if (_historyRepo != null)
-            {
-                try
-                {
-                    await _historyRepo.AddRecordAsync(new BackupRecord
-                    {
-                        Timestamp = DateTimeOffset.UtcNow,
-                        OperationType = BackupOperationType.Restore,
-                        DatabaseName = targetDb,
-                        TargetDatabase = targetDb,
-                        FilePath = options.SourceFilePath,
-                        Format = options.Format,
-                        FileSizeBytes = new FileInfo(options.SourceFilePath).Length,
-                        DurationMs = (long)stopwatch.Elapsed.TotalMilliseconds,
-                        Status = BackupStatus.Success,
-                        Arguments = restoreArgs
-                    }, ct);
-                }
-                catch { }
-            }
-
-            return RestoreResult.Success(stopwatch.Elapsed, restoreArgs, snapshotFilePath);
+            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [SUCCESS] {CoreStrings.Format("Restore_Log_Success", CoreStrings.Format("Format_DurationSeconds", run.Elapsed.TotalSeconds.ToString("F2")))}");
+            return RestoreResult.Success(run.Elapsed, run.CommandLine, snapshotFilePath);
         }
-        else
-        {
-            var err = !string.IsNullOrWhiteSpace(restoreProc.StandardError)
-                ? restoreProc.StandardError
-                : restoreProc.ErrorMessage ?? CoreStrings.Get("Restore_Error_NonZeroExit");
 
-            onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [ERROR] {CoreStrings.Format("Restore_Log_Failed", restoreProc.ExitCode, err)}");
-
-            if (_historyRepo != null)
-            {
-                try
-                {
-                    await _historyRepo.AddRecordAsync(new BackupRecord
-                    {
-                        Timestamp = DateTimeOffset.UtcNow,
-                        OperationType = BackupOperationType.Restore,
-                        DatabaseName = targetDb,
-                        TargetDatabase = targetDb,
-                        FilePath = options.SourceFilePath,
-                        Format = options.Format,
-                        FileSizeBytes = new FileInfo(options.SourceFilePath).Length,
-                        DurationMs = (long)stopwatch.Elapsed.TotalMilliseconds,
-                        Status = BackupStatus.Failed,
-                        ErrorMessage = err,
-                        Arguments = restoreArgs
-                    }, ct);
-                }
-                catch { }
-            }
-
-            return RestoreResult.Failure(err, restoreProc.ExitCode, stopwatch.Elapsed, restoreArgs, snapshotFilePath);
-        }
+        onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] [ERROR] {CoreStrings.Format("Restore_Log_Failed", run.ExitCode, run.ErrorMessage)}");
+        return RestoreResult.Failure(
+            run.ErrorMessage, run.ExitCode, run.Elapsed, run.CommandLine, snapshotFilePath);
     }
-
-    private static Dictionary<string, string?> BuildEnvironmentVariables(string? password)
-    {
-        var envVars = new Dictionary<string, string?>();
-        if (!string.IsNullOrEmpty(password)) envVars["PGPASSWORD"] = password;
-
-        // Keep client data encoding explicit and avoid localized Windows messages
-        // being emitted in a code page that the redirected process cannot decode.
-        envVars["PGCLIENTENCODING"] = "UTF8";
-        envVars["LC_ALL"] = "C";
-        envVars["LC_MESSAGES"] = "C";
-        envVars["LANG"] = "C";
-        envVars["LANGUAGE"] = null;
-        return envVars;
-    }
-
-    private static string EscapeArgument(string value) => value.Replace("\"", "\\\"");
 
     private static void DeleteRestoreListFile(string? path)
     {

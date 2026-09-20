@@ -189,8 +189,9 @@ public class RestoreServiceTests
             var runner = new TestProcessRunner { FailSnapshot = true };
             var detector = new TestToolDetector();
             var historyRepo = new SqliteBackupHistoryRepository(":memory:");
-            var backupService = new BackupService(new ClientToolRun(runner, historyRepo), detector);
-            var service = new RestoreService(runner, detector, backupService, historyRepo);
+            var clientToolRun = new ClientToolRun(runner, historyRepo);
+            var backupService = new BackupService(clientToolRun, detector);
+            var service = new RestoreService(clientToolRun, detector, backupService);
 
             var options = new RestoreOptions
             {
@@ -239,8 +240,9 @@ public class RestoreServiceTests
             var runner = new TestProcessRunner { FailSnapshot = false, FailRestore = false };
             var detector = new TestToolDetector();
             var historyRepo = new SqliteBackupHistoryRepository(":memory:");
-            var backupService = new BackupService(new ClientToolRun(runner, historyRepo), detector);
-            var service = new RestoreService(runner, detector, backupService, historyRepo);
+            var clientToolRun = new ClientToolRun(runner, historyRepo);
+            var backupService = new BackupService(clientToolRun, detector);
+            var service = new RestoreService(clientToolRun, detector, backupService);
 
             var options = new RestoreOptions
             {
@@ -305,7 +307,7 @@ public class RestoreServiceTests
             catalog.Schemas.Add("public");
             catalog.Relations.Add(RestoreTargetCatalog.Key("public", "ExistingTable"));
             var service = new RestoreService(
-                runner,
+                new ClientToolRun(runner),
                 new TestToolDetector(),
                 catalogReader: new TestCatalogReader(catalog));
             var options = new RestoreOptions
@@ -362,7 +364,7 @@ public class RestoreServiceTests
             catalog.Schemas.Add("public");
             catalog.Relations.Add(RestoreTargetCatalog.Key("public", "ExistingTable"));
             var service = new RestoreService(
-                runner,
+                new ClientToolRun(runner),
                 new TestToolDetector(),
                 catalogReader: new TestCatalogReader(catalog));
             var options = new RestoreOptions
@@ -406,7 +408,7 @@ public class RestoreServiceTests
                 ArchiveListOutput = "10; 0 100 POLICY public ExistingTable tenant_policy owner"
             };
             var service = new RestoreService(
-                runner,
+                new ClientToolRun(runner),
                 new TestToolDetector(),
                 catalogReader: new TestCatalogReader(new RestoreTargetCatalog()));
             var options = new RestoreOptions
@@ -460,9 +462,10 @@ public class RestoreServiceTests
             catalog.ForeignKeyDependencies.Add(new RestoreForeignKeyDependency(child, parent));
             var dataPreparation = new TestDataPreparationService(runner);
             var detector = new TestToolDetector();
-            var backupService = new BackupService(new ClientToolRun(runner), detector);
+            var clientToolRun = new ClientToolRun(runner);
+            var backupService = new BackupService(clientToolRun, detector);
             var service = new RestoreService(
-                runner,
+                clientToolRun,
                 detector,
                 backupService,
                 catalogReader: new TestCatalogReader(catalog),
@@ -519,7 +522,7 @@ public class RestoreServiceTests
             };
             var dataPreparation = new TestDataPreparationService(runner);
             var service = new RestoreService(
-                runner,
+                new ClientToolRun(runner),
                 new TestToolDetector(),
                 catalogReader: new TestCatalogReader(new RestoreTargetCatalog()),
                 dataPreparationService: dataPreparation);
@@ -575,7 +578,7 @@ public class RestoreServiceTests
             catalog.ForeignKeyDependencies.Add(new RestoreForeignKeyDependency(beta, alpha));
             var dataPreparation = new TestDataPreparationService(runner);
             var service = new RestoreService(
-                runner,
+                new ClientToolRun(runner),
                 new TestToolDetector(),
                 catalogReader: new TestCatalogReader(catalog),
                 dataPreparationService: dataPreparation);

@@ -4,20 +4,20 @@
 
 **Blocked by:** 01, 02
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 ## 要做的事
 
-- [ ] `RestoreArgumentsBuilder.Build` 回傳型別由 `string` 改為 `IReadOnlyList<string>`，移除其私有 `Escape`
-- [ ] 產出的清單**不含**連線參數（`-h`、`-p`、`-U`、`-d`）
-- [ ] `RestoreService` 注入並使用客戶端工具作業，移除 `BuildEnvironmentVariables`、自己的 `EscapeArgument`、`Stopwatch`、離開碼判定、錯誤訊息擷取、兩段 `AddRecordAsync`
-- [ ] `--list` 那次呼叫（取得封存目錄）也改走客戶端工具作業或共用的拼接，**不得留下第三份跳脫實作**
-- [ ] `RestoreService` 保留：客戶端工具偵測與挑選、目標資料庫預設、格式推斷、計畫產出與驗證、暫存 `.list` 檔生命週期、安全快照協調、`RestoreResult` 轉換
-- [ ] 安全快照**維持**呼叫 `IBackupService.BackupAsync`，不改為直接使用客戶端工具作業
-- [ ] 改寫 `RestoreArgumentsBuilderTests` 的 5 個測試
-- [ ] 調整 `RestoreServiceTests` 的 8 個測試與 `TestProcessRunner`
-- [ ] 調整 `RestoreTargetDatabaseTests` 的 1 個測試
-- [ ] `dotnet build` 與 `dotnet test` 全綠
+- [x] `RestoreArgumentsBuilder.Build` 回傳型別由 `string` 改為 `IReadOnlyList<string>`，移除其私有 `Escape`
+- [x] 產出的清單**不含**連線參數（`-h`、`-p`、`-U`、`-d`）
+- [x] `RestoreService` 注入並使用客戶端工具作業，移除 `BuildEnvironmentVariables`、自己的 `EscapeArgument`、`Stopwatch`、離開碼判定、錯誤訊息擷取、兩段 `AddRecordAsync`
+- [x] `--list` 那次呼叫（取得封存目錄）也改走客戶端工具作業或共用的拼接，**不得留下第三份跳脫實作**
+- [x] `RestoreService` 保留：客戶端工具偵測與挑選、目標資料庫預設、格式推斷、計畫產出與驗證、暫存 `.list` 檔生命週期、安全快照協調、`RestoreResult` 轉換
+- [x] 安全快照**維持**呼叫 `IBackupService.BackupAsync`，不改為直接使用客戶端工具作業
+- [x] 改寫 `RestoreArgumentsBuilderTests` 的 5 個測試
+- [x] 調整 `RestoreServiceTests` 的 8 個測試與 `TestProcessRunner`
+- [x] 調整 `RestoreTargetDatabaseTests` 的 1 個測試
+- [x] `dotnet build` 與 `dotnet test` 全綠
 
 ## `TestProcessRunner` 的反解需要調整
 

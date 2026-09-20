@@ -67,10 +67,9 @@ public class ConnectionStringRejectionTests
         try
         {
             var service = new RestoreService(
-                runner.Object,
+                new ClientToolRun(runner.Object),
                 detector.Object,
                 backupService.Object,
-                historyRepo: null,
                 catalogReader: catalogReader.Object,
                 dataPreparationService: dataPreparation.Object);
 

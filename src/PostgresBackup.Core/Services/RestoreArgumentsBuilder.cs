@@ -1,30 +1,22 @@
-using System.Text;
 using PostgresBackup.Core.Models;
 
 namespace PostgresBackup.Core.Services;
 
 /// <summary>
-/// 官方 pg_restore 與 psql 還原參數構建器
+/// 官方 pg_restore 與 psql 還原參數構建器。
+///
+/// 回傳未跳脫的 argv 元素清單；引號與拼接由客戶端工具作業統一處理，
+/// 連線參數（<c>-h</c>、<c>-p</c>、<c>-U</c>、<c>-d</c>）亦由該模組補上，不在此產生。
 /// </summary>
 public static class RestoreArgumentsBuilder
 {
-    public static string Build(RestoreOptions options, string? useListFilePath = null)
+    public static IReadOnlyList<string> Build(RestoreOptions options, string? useListFilePath = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         if (string.IsNullOrWhiteSpace(options.SourceFilePath))
             throw new ArgumentException("Source file path cannot be empty.", nameof(options));
 
-        var sb = new StringBuilder();
-
-        var conn = options.Connection;
-        var host = string.IsNullOrWhiteSpace(conn.Host) ? "localhost" : conn.Host;
-        var port = conn.Port > 0 ? conn.Port : 5432;
-        var username = string.IsNullOrWhiteSpace(conn.Username) ? "postgres" : conn.Username;
-        var targetDb = !string.IsNullOrWhiteSpace(options.TargetDatabase)
-            ? options.TargetDatabase
-            : (string.IsNullOrWhiteSpace(conn.Database) ? "postgres" : conn.Database);
-
-        sb.Append($"-h \"{Escape(host)}\" -p {port} -U \"{Escape(username)}\" -d \"{Escape(targetDb)}\"");
+        var argv = new List<string>();
 
         if (options.Format == BackupFormat.Custom)
         {
@@ -38,15 +30,17 @@ public static class RestoreArgumentsBuilder
                             "Normal restore requires a filtered archive list.");
                     }
 
-                    sb.Append($" --use-list \"{Escape(useListFilePath)}\"");
+                    argv.Add("--use-list");
+                    argv.Add(useListFilePath);
                     // Defense in depth: if a target object appears between inspection
                     // and restore, never copy archive data into that existing table.
-                    sb.Append(" --no-data-for-failed-tables");
+                    argv.Add("--no-data-for-failed-tables");
                     break;
                 case RestoreMode.CleanAndRecreate:
                     // Restore into the selected target database. --create would use the
                     // database name stored in the archive, which breaks cross-database restores.
-                    sb.Append(" --clean --if-exists");
+                    argv.Add("--clean");
+                    argv.Add("--if-exists");
                     break;
                 case RestoreMode.DataOnly:
                     if (string.IsNullOrWhiteSpace(useListFilePath))
@@ -55,27 +49,28 @@ public static class RestoreArgumentsBuilder
                             "Data-only restore requires an ordered archive list.");
                     }
 
-                    sb.Append($" --data-only --use-list \"{Escape(useListFilePath)}\"");
+                    argv.Add("--data-only");
+                    argv.Add("--use-list");
+                    argv.Add(useListFilePath);
                     break;
             }
 
             // Never continue through the remaining TOC after a genuine restore error.
-            sb.Append(" --exit-on-error");
+            argv.Add("--exit-on-error");
 
             // 詳細進度輸出
-            sb.Append(" -v");
+            argv.Add("-v");
 
             // 來源檔案路徑
-            sb.Append($" \"{Escape(options.SourceFilePath)}\"");
+            argv.Add(options.SourceFilePath);
         }
         else
         {
             // psql 腳本執行模式
-            sb.Append($" -f \"{Escape(options.SourceFilePath)}\"");
+            argv.Add("-f");
+            argv.Add(options.SourceFilePath);
         }
 
-        return sb.ToString();
+        return argv;
     }
-
-    private static string Escape(string val) => val.Replace("\"", "\\\"");
 }

@@ -3,6 +3,10 @@ using PostgresBackup.Core.Services;
 
 namespace PostgresBackup.Core.Tests.Services;
 
+/// <summary>
+/// 構建器回傳未跳脫的 argv 元素清單，因此斷言比對的是元素本身而非命令列外觀。
+/// 連線參數與引號規則改由客戶端工具作業負責，其行為由 <see cref="ClientToolRunTests"/> 守住。
+/// </summary>
 public class RestoreArgumentsBuilderTests
 {
     [Fact]
@@ -32,7 +36,7 @@ public class RestoreArgumentsBuilderTests
 
         var args = RestoreArgumentsBuilder.Build(options, @"C:\temp\restore.list");
 
-        Assert.Contains("--use-list \"C:\\temp\\restore.list\"", args);
+        Assert.Equal(["--use-list", @"C:\temp\restore.list"], args.Take(2));
         Assert.Contains("--no-data-for-failed-tables", args);
         Assert.Contains("--exit-on-error", args);
         Assert.DoesNotContain("--clean", args);
@@ -54,7 +58,7 @@ public class RestoreArgumentsBuilderTests
         var args = RestoreArgumentsBuilder.Build(options, @"C:\temp\data-restore.list");
 
         Assert.Contains("--data-only", args);
-        Assert.Contains("--use-list \"C:\\temp\\data-restore.list\"", args);
+        Assert.Equal(["--use-list", @"C:\temp\data-restore.list"], args.SkipWhile(a => a != "--use-list").Take(2));
         Assert.Contains("--exit-on-error", args);
     }
 
@@ -77,15 +81,15 @@ public class RestoreArgumentsBuilderTests
 
         var args = RestoreArgumentsBuilder.Build(options);
 
-        Assert.Contains("-h \"localhost\"", args);
-        Assert.Contains("-p 5432", args);
-        Assert.Contains("-U \"postgres\"", args);
-        Assert.Contains("-d \"target_db\"", args);
-        Assert.Contains("--clean --if-exists", args);
+        Assert.Equal(["--clean", "--if-exists"], args.Take(2));
         Assert.Contains("--exit-on-error", args);
         Assert.DoesNotContain("--create", args);
         Assert.Contains("-v", args);
-        Assert.Contains(@"""C:\backups\mybackup.dump""", args);
+        Assert.Equal(@"C:\backups\mybackup.dump", args[^1]);
+
+        // 目標資料庫由客戶端工具作業以 -d 補上，構建器不產生連線參數。
+        Assert.DoesNotContain("-d", args);
+        Assert.DoesNotContain("target_db", args);
     }
 
     [Fact]
@@ -106,9 +110,7 @@ public class RestoreArgumentsBuilderTests
 
         var args = RestoreArgumentsBuilder.Build(options);
 
-        Assert.Contains("-h \"10.0.0.1\"", args);
-        Assert.Contains("-d \"target_db\"", args);
-        Assert.Contains(@"-f ""C:\backups\script.sql""", args);
+        Assert.Equal(["-f", @"C:\backups\script.sql"], args);
         Assert.DoesNotContain("--clean", args);
     }
 }
