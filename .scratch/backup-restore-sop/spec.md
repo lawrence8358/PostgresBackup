@@ -21,5 +21,5 @@ Status: resolved
 
 ## 驗證
 
-2026-10-16 完成三平台真實備份還原，資料均恢復 3 客戶、5 訂單、5200；10 張實際截圖。dotnet test PostgresBackup.sln --no-restore --verbosity minimal：Core 124、CLI 56、WPF 49，合計229項通過。未發現產品bug。Windows實測一般登入使用者排程，SYSTEM需管理員故未宣稱實測。code review由主代理在提交後安排。
+2026-10-16 完成三平台真實備份還原，資料均恢復 3 客戶、5 訂單、5200；10 張實際截圖。dotnet test PostgresBackup.sln --no-restore --verbosity minimal：Core 124、CLI 56、WPF 49，合計229項通過。未發現產品bug。Windows實測一般登入使用者排程，SYSTEM需管理員故未宣稱實測。已完成 Standards / Spec 雙軸 code review；修正桌面圖說的領域用語，並補上 WSL 發行版名稱查詢與 Docker Integration 設定。文件連結與 git diff --check 通過，Linux check-tools 實機重驗 READY / 18.6。
 

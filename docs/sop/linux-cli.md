@@ -44,7 +44,13 @@ docker run -d --name sop-linux-cli --network container:sop-postgres `
   --entrypoint bash postgres:18.6 -lc "sleep infinity"
 ```
 
-若是沿用本次已建好的 `sop-linux-cli`，就不用重建。進入 Linux：
+若是沿用本次已建好的 `sop-linux-cli`，就不用重建。先在 PowerShell 列出已安裝的 WSL 發行版：
+
+```powershell
+wsl -l -q
+```
+
+下方的 `Ubuntu-20.04` 是本次實測名稱，請換成你清單中的實際名稱，例如 `Ubuntu`。再到 Docker Desktop 的 **Settings → Resources → WSL Integration**，啟用該發行版並按 **Apply & restart**。進入 Linux：
 
 ```powershell
 wsl -d Ubuntu-20.04 -- docker exec -it sop-linux-cli bash

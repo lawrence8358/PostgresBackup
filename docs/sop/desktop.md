@@ -73,7 +73,7 @@ docker exec sop-postgres psql -U postgres -d sop_desktop -c "UPDATE customers SE
 
 目標資料庫必須先存在。若是新環境，先用 pgAdmin 或 `createdb` 建立空資料庫，再在設定頁新增它的連線。
 
-![核對來源檔、目標資料庫、覆寫模式與安全快照](images/desktop-03-confirm.png)
+![核對來源檔、目標資料庫、還原模式與安全快照](images/desktop-03-confirm.png)
 
 ![還原完成且留下還原前快照](images/desktop-04-restored.png)
 
