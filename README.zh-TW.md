@@ -329,6 +329,7 @@ dist/
 
 ## 開發者文件
 
+- [實地操演 SOP](docs/sop/README.md) — 桌面、Windows 排程與 Linux 備份還原，含測試資料與真實截圖
 - [完整使用者手冊](docs/USER_MANUAL.md) — 操作全流程、工具安裝 SOP、排程實戰指南與 FAQ
 - [產品規格與願景](PRODUCT.md) — 願景、目標使用者與設計守則
 - [領域模型](CONTEXT.md) — 專案術語定義

@@ -329,6 +329,7 @@ The version is read from the project files, so bumping `<Version>` is all that i
 
 ## Documentation
 
+- [Hands-on SOPs (繁體中文)](docs/sop/README.md) — desktop, Windows scheduled CLI, and Linux backup/restore with real screenshots
 - [User Manual (繁體中文)](docs/USER_MANUAL.md) — full walkthrough, tool installation SOP, scheduling guide and FAQ
 - [Product Context](PRODUCT.md) — vision, target users and design guardrails
 - [Domain Model](CONTEXT.md) — project terminology
