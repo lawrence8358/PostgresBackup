@@ -6,5 +6,6 @@ public enum OperationStatusKind
     Running,
     Completed,
     Failed,
-    Error
+    Error,
+    Cancelled
 }

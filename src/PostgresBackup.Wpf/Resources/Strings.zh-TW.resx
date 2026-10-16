@@ -610,4 +610,8 @@
   <data name="Common_UnexpectedError_Summary" xml:space="preserve">
     <value>發生未預期錯誤，請查看下方錯誤詳情。</value>
   </data>
+  <data name="Status_Cancelled" xml:space="preserve"><value>已取消</value></data>
+  <data name="Backup_Status_Cancelled" xml:space="preserve"><value>備份已取消。部分檔案會保留，請勿當作完整備份使用。</value></data>
+  <data name="Restore_Status_Cancelled" xml:space="preserve"><value>還原已取消，目標資料庫可能不完整。請查看詳情後再進行復原。</value></data>
+  <data name="Operation_Cancel" xml:space="preserve"><value>取消作業</value></data>
 </root>

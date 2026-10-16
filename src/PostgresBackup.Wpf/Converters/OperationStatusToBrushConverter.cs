@@ -10,13 +10,14 @@ public sealed class OperationStatusToBrushConverter : IValueConverter
     private static readonly Brush SuccessBrush = CreateBrush(0x2E, 0x7D, 0x32);
     private static readonly Brush RunningBrush = CreateBrush(0x19, 0x76, 0xD2);
     private static readonly Brush FailureBrush = CreateBrush(0xD3, 0x2F, 0x2F);
+    private static readonly Brush CancelledBrush = CreateBrush(0x75, 0x75, 0x75);
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         value is OperationStatusKind.Running
             ? RunningBrush
             : value is OperationStatusKind.Failed or OperationStatusKind.Error
                 ? FailureBrush
-                : SuccessBrush;
+                : value is OperationStatusKind.Cancelled ? CancelledBrush : SuccessBrush;
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         Binding.DoNothing;

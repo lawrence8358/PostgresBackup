@@ -244,4 +244,10 @@
   <data name="ProfileStore_Error_FileCorrupted" xml:space="preserve">
     <value>The connection profile file is damaged and cannot be read ({0}): {1} Its contents cannot be recovered; recreate the affected connection profiles.</value>
   </data>
+  <data name="Operation_Cancelled" xml:space="preserve"><value>Operation cancelled.</value></data>
+  <data name="Backup_Cancelled_PartialFile" xml:space="preserve"><value>Backup cancelled. Any partial file is retained at {0}. Do not use it as a complete backup.</value></data>
+  <data name="Restore_Cancelled_Partial" xml:space="preserve"><value>Restore to {0} was cancelled. The target database may be partially modified; cancellation does not undo completed changes.</value></data>
+  <data name="Restore_Cancelled_BeforeChanges" xml:space="preserve"><value>Restore to {0} was cancelled before modifying the target database.</value></data>
+  <data name="Restore_Cancelled_Snapshot" xml:space="preserve"><value>Safety snapshot retained at: {0}</value></data>
+  <data name="Restore_Cancelled_NoSnapshot" xml:space="preserve"><value>No completed safety snapshot is available for this operation.</value></data>
 </root>

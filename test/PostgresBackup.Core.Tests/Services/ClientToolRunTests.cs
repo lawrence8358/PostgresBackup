@@ -363,7 +363,7 @@ public class ClientToolRunTests
     }
 
     [Fact]
-    public async Task RunAsync_WhenCancelled_PropagatesInsteadOfRecordingAFailure()
+    public async Task RunAsync_WhenCancelled_PropagatesAndRecordsCancellationInsteadOfFailure()
     {
         var runner = new RecordingProcessRunner
         {
@@ -373,7 +373,7 @@ public class ClientToolRunTests
         var run = new ClientToolRun(runner, history);
 
         await Assert.ThrowsAsync<OperationCanceledException>(() => run.RunAsync(Request()));
-        Assert.Empty(history.Records);
+        Assert.Equal("Cancelled", Assert.Single(history.Records).Status.ToString());
     }
 
     [Fact]

@@ -84,165 +84,178 @@ public static class RestoreCommand
         command.Add(pgBinPathOption);
         command.Add(logFileOption);
 
-        command.SetAction(async parseResult =>
+        command.SetAction(async (parseResult, ct) =>
         {
-            var filePath = parseResult.GetValue(fileOption)!;
-            var profileName = parseResult.GetValue(profileOption);
-            var host = parseResult.GetValue(hostOption);
-            var port = parseResult.GetValue(portOption);
-            var database = parseResult.GetValue(databaseOption);
-            var username = parseResult.GetValue(usernameOption);
-            var password = parseResult.GetValue(passwordOption);
-            var modeStr = parseResult.GetValue(modeOption);
-            var noSnapshot = parseResult.GetValue(noSnapshotOption);
-            var yes = parseResult.GetValue(yesOption);
-            var pgBinPath = parseResult.GetValue(pgBinPathOption);
-            var logFilePath = parseResult.GetValue(logFileOption);
-
-            var profileRepo = services.GetRequiredService<IConnectionProfileRepository>();
-            var restoreService = services.GetRequiredService<IRestoreService>();
-
-            var connSettings = new ConnectionSettings();
-
-            if (!string.IsNullOrWhiteSpace(profileName))
+            StreamWriter? logWriter = null;
+            try
             {
-                // 存取被拒與「找不到設定」是兩回事：此存放區只有系統管理員讀得到，
-                // 折疊成後者會讓一般使用者去重建一份其實已經存在的設定。
-                var profiles = await ProfileStoreAccess.TryLoadAllAsync(profileRepo);
-                if (profiles == null)
-                {
-                    return 1;
-                }
+                ct.ThrowIfCancellationRequested();
+                var filePath = parseResult.GetValue(fileOption)!;
+                var profileName = parseResult.GetValue(profileOption);
+                var host = parseResult.GetValue(hostOption);
+                var port = parseResult.GetValue(portOption);
+                var database = parseResult.GetValue(databaseOption);
+                var username = parseResult.GetValue(usernameOption);
+                var password = parseResult.GetValue(passwordOption);
+                var modeStr = parseResult.GetValue(modeOption);
+                var noSnapshot = parseResult.GetValue(noSnapshotOption);
+                var yes = parseResult.GetValue(yesOption);
+                var pgBinPath = parseResult.GetValue(pgBinPathOption);
+                var logFilePath = parseResult.GetValue(logFileOption);
 
-                var matched = profiles.FirstOrDefault(p =>
-                    string.Equals(p.Id, profileName, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(p.Name, profileName, StringComparison.OrdinalIgnoreCase));
+                var profileRepo = services.GetRequiredService<IConnectionProfileRepository>();
+                var restoreService = services.GetRequiredService<IRestoreService>();
 
-                if (matched != null)
+                var connSettings = new ConnectionSettings();
+
+                if (!string.IsNullOrWhiteSpace(profileName))
                 {
-                    var (passwordRead, profilePassword) =
-                        await ProfileStoreAccess.TryGetPasswordAsync(profileRepo, matched.Id);
-                    if (!passwordRead)
+                    // 存取被拒與「找不到設定」是兩回事：此存放區只有系統管理員讀得到，
+                    // 折疊成後者會讓一般使用者去重建一份其實已經存在的設定。
+                    var profiles = await ProfileStoreAccess.TryLoadAllAsync(profileRepo);
+                    if (profiles == null)
                     {
                         return 1;
                     }
 
-                    ProfileStoreAccess.WarnIfPasswordMissing(matched.Name, profilePassword);
+                    var matched = profiles.FirstOrDefault(p =>
+                        string.Equals(p.Id, profileName, StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(p.Name, profileName, StringComparison.OrdinalIgnoreCase));
 
-                    connSettings.Host = matched.Host;
-                    connSettings.Port = matched.Port;
-                    connSettings.Database = matched.Database;
-                    connSettings.Username = matched.Username;
-                    connSettings.Password = profilePassword;
+                    if (matched != null)
+                    {
+                        var (passwordRead, profilePassword) =
+                            await ProfileStoreAccess.TryGetPasswordAsync(profileRepo, matched.Id);
+                        if (!passwordRead)
+                        {
+                            return 1;
+                        }
+
+                        ProfileStoreAccess.WarnIfPasswordMissing(matched.Name, profilePassword);
+
+                        connSettings.Host = matched.Host;
+                        connSettings.Port = matched.Port;
+                        connSettings.Database = matched.Database;
+                        connSettings.Username = matched.Username;
+                        connSettings.Password = profilePassword;
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"[ERROR] 找不到名為 '{profileName}' 的連線設定檔，還原作業已中止。");
+                        Console.ResetColor();
+                        return 1;
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(password))
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine("[WARNING] 使用 -p/--password 傳入密碼會暴露於行程資訊中（例如工作管理員、`Get-CimInstance Win32_Process` 或 PowerShell 歷史紀錄），建議改用命令列連線設定 (--profile)。");
+                    Console.ResetColor();
+                }
+
+                if (!string.IsNullOrWhiteSpace(host)) connSettings.Host = host;
+                if (port.HasValue && port.Value > 0) connSettings.Port = port.Value;
+                if (!string.IsNullOrWhiteSpace(database)) connSettings.Database = database;
+                if (!string.IsNullOrWhiteSpace(username)) connSettings.Username = username;
+                if (!string.IsNullOrWhiteSpace(password)) connSettings.Password = password;
+
+                var targetDb = !string.IsNullOrWhiteSpace(database) ? database : connSettings.Database;
+
+                // 高危險操作確認
+                if (!yes)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("\n[⚠️ 高危險操作警告]");
+                    Console.WriteLine($"您即將對資料庫 '{targetDb}' 執行還原作業，既有資料可能被覆蓋或刪除！");
+                    Console.ResetColor();
+                    Console.Write($"若確定執行，請輸入目標資料庫名稱 '{targetDb}': ");
+                    var input = await Console.In.ReadLineAsync(ct);
+                    if (!string.Equals(input?.Trim(), targetDb, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine("輸入不符，還原作業已安全取消。");
+                        Console.ResetColor();
+                        return 1;
+                    }
+                }
+
+                var mode = modeStr?.ToLowerInvariant() switch
+                {
+                    "clean" => RestoreMode.CleanAndRecreate,
+                    "data" => RestoreMode.DataOnly,
+                    _ => RestoreMode.Normal
+                };
+
+                var format = RestoreOptions.DetectFormatFromFilePath(filePath);
+
+                var options = new RestoreOptions
+                {
+                    Connection = connSettings,
+                    SourceFilePath = filePath,
+                    TargetDatabase = targetDb,
+                    Format = format,
+                    Mode = mode,
+                    CreatePreRestoreSnapshot = !noSnapshot,
+                    ClientToolDirectory = pgBinPath
+                };
+
+                if (!string.IsNullOrWhiteSpace(logFilePath))
+                {
+                    try
+                    {
+                        var logDir = Path.GetDirectoryName(logFilePath);
+                        if (!string.IsNullOrEmpty(logDir) && !Directory.Exists(logDir))
+                        {
+                            Directory.CreateDirectory(logDir);
+                        }
+                        logWriter = new StreamWriter(logFilePath, append: true) { AutoFlush = true };
+                    }
+                    catch { }
+                }
+
+                void OnLog(string line)
+                {
+                    Console.WriteLine(line);
+                    logWriter?.WriteLine(line);
+                }
+
+                Console.WriteLine("=================================================");
+                Console.WriteLine(" PostgresBackup CLI — 安全還原作業");
+                Console.WriteLine("=================================================");
+
+                var result = await restoreService.RestoreAsync(options, OnLog, ct);
+
+                if (result.IsSuccess)
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine("\n還原作業成功完成！");
+                    if (result.SnapshotCreated)
+                    {
+                        Console.WriteLine($"前置安全快照保留於: {result.SnapshotFilePath}");
+                    }
+                    Console.ResetColor();
+                    return 0;
                 }
                 else
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"[ERROR] 找不到名為 '{profileName}' 的連線設定檔，還原作業已中止。");
+                    Console.WriteLine($"\n還原作業中止或失敗：{result.ErrorMessage}");
                     Console.ResetColor();
                     return 1;
                 }
             }
-
-            if (!string.IsNullOrWhiteSpace(password))
+            catch (OperationCanceledException ex)
             {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("[WARNING] 使用 -p/--password 傳入密碼會暴露於行程資訊中（例如工作管理員、`Get-CimInstance Win32_Process` 或 PowerShell 歷史紀錄），建議改用命令列連線設定 (--profile)。");
-                Console.ResetColor();
+                var message = $"[CANCELLED] {ex.Message}";
+                Console.WriteLine(message);
+                logWriter?.WriteLine(message);
+                return 130;
             }
-
-            if (!string.IsNullOrWhiteSpace(host)) connSettings.Host = host;
-            if (port.HasValue && port.Value > 0) connSettings.Port = port.Value;
-            if (!string.IsNullOrWhiteSpace(database)) connSettings.Database = database;
-            if (!string.IsNullOrWhiteSpace(username)) connSettings.Username = username;
-            if (!string.IsNullOrWhiteSpace(password)) connSettings.Password = password;
-
-            var targetDb = !string.IsNullOrWhiteSpace(database) ? database : connSettings.Database;
-
-            // 高危險操作確認
-            if (!yes)
+            finally
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("\n[⚠️ 高危險操作警告]");
-                Console.WriteLine($"您即將對資料庫 '{targetDb}' 執行還原作業，既有資料可能被覆蓋或刪除！");
-                Console.ResetColor();
-                Console.Write($"若確定執行，請輸入目標資料庫名稱 '{targetDb}': ");
-                var input = Console.ReadLine();
-                if (!string.Equals(input?.Trim(), targetDb, StringComparison.OrdinalIgnoreCase))
-                {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine("輸入不符，還原作業已安全取消。");
-                    Console.ResetColor();
-                    return 1;
-                }
-            }
-
-            var mode = modeStr?.ToLowerInvariant() switch
-            {
-                "clean" => RestoreMode.CleanAndRecreate,
-                "data" => RestoreMode.DataOnly,
-                _ => RestoreMode.Normal
-            };
-
-            var format = RestoreOptions.DetectFormatFromFilePath(filePath);
-
-            var options = new RestoreOptions
-            {
-                Connection = connSettings,
-                SourceFilePath = filePath,
-                TargetDatabase = targetDb,
-                Format = format,
-                Mode = mode,
-                CreatePreRestoreSnapshot = !noSnapshot,
-                ClientToolDirectory = pgBinPath
-            };
-
-            StreamWriter? logWriter = null;
-            if (!string.IsNullOrWhiteSpace(logFilePath))
-            {
-                try
-                {
-                    var logDir = Path.GetDirectoryName(logFilePath);
-                    if (!string.IsNullOrEmpty(logDir) && !Directory.Exists(logDir))
-                    {
-                        Directory.CreateDirectory(logDir);
-                    }
-                    logWriter = new StreamWriter(logFilePath, append: true) { AutoFlush = true };
-                }
-                catch { }
-            }
-
-            void OnLog(string line)
-            {
-                Console.WriteLine(line);
-                logWriter?.WriteLine(line);
-            }
-
-            Console.WriteLine("=================================================");
-            Console.WriteLine(" PostgresBackup CLI — 安全還原作業");
-            Console.WriteLine("=================================================");
-
-            var result = await restoreService.RestoreAsync(options, OnLog);
-
-            logWriter?.Dispose();
-
-            if (result.IsSuccess)
-            {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("\n還原作業成功完成！");
-                if (result.SnapshotCreated)
-                {
-                    Console.WriteLine($"前置安全快照保留於: {result.SnapshotFilePath}");
-                }
-                Console.ResetColor();
-                return 0;
-            }
-            else
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"\n還原作業中止或失敗：{result.ErrorMessage}");
-                Console.ResetColor();
-                return 1;
+                logWriter?.Dispose();
             }
         });
 

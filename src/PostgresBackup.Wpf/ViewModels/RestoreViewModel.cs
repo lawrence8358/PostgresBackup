@@ -169,8 +169,8 @@ public partial class RestoreViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
-    public async Task StartRestoreAsync()
+    [RelayCommand(IncludeCancelCommand = true)]
+    public async Task StartRestoreAsync(CancellationToken ct = default)
     {
         if (IsRestoring) return;
 
@@ -216,7 +216,8 @@ public partial class RestoreViewModel : ObservableObject
 
         try
         {
-            var password = await _profileRepo.GetPasswordAsync(SelectedProfile.Id);
+            var password = await _profileRepo.GetPasswordAsync(SelectedProfile.Id, ct);
+            ct.ThrowIfCancellationRequested();
             var connSettings = SelectedProfile.ToConnectionSettings(password);
             connSettings.Database = targetDb;
 
@@ -235,7 +236,8 @@ public partial class RestoreViewModel : ObservableObject
 
             var result = await _restoreService.RestoreAsync(
                 options,
-                onLogLine: AppendLog);
+                onLogLine: AppendLog,
+                ct: ct);
             await _terminalOutputBuffer.FlushAsync();
 
             if (result.IsSuccess)
@@ -258,6 +260,16 @@ public partial class RestoreViewModel : ObservableObject
                 StatusMessage = LocalizationService.S("Restore_Status_Failed_Summary");
                 ErrorDetails = result.ErrorMessage ?? string.Empty;
             }
+        }
+        catch (OperationCanceledException ex)
+        {
+            AppendLog($"[CANCELLED] {ex.Message}");
+            await _terminalOutputBuffer.FlushAsync();
+            StatusKind = OperationStatusKind.Cancelled;
+            StatusBadgeText = LocalizationService.S("Status_Cancelled");
+            StatusMessage = LocalizationService.S("Restore_Status_Cancelled");
+            ErrorDetails = ex.Message;
+            IsConfirmed = false;
         }
         catch (Exception ex)
         {

@@ -20,6 +20,7 @@ public class ProcessRunner : IProcessRunner
         Action<string>? onErrorLine = null,
         CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
         var startInfo = new ProcessStartInfo
         {
             FileName = executable,
@@ -105,6 +106,9 @@ public class ProcessRunner : IProcessRunner
                 {
                     process.Kill(entireProcessTree: true);
                 }
+                // Kill 是非同步終止要求，必須等工具釋放檔案並排空回呼後才向呼叫端回報取消。
+                await process.WaitForExitAsync(CancellationToken.None);
+                process.WaitForExit();
             }
             catch
             {

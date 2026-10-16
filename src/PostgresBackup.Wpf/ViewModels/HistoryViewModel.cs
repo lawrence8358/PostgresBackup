@@ -138,11 +138,21 @@ public partial class HistoryViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    private bool CanInitiateRestore(BackupRecord? record)
+    {
+        var target = record ?? SelectedRecord;
+        // 取消的還原仍指向原始備份；取消的備份與快照則只可能是部分檔案。
+        return target is not null && (target.Status != BackupStatus.Cancelled
+            || target.OperationType == BackupOperationType.Restore);
+    }
+
+    partial void OnSelectedRecordChanged(BackupRecord? value) => InitiateRestoreCommand.NotifyCanExecuteChanged();
+
+    [RelayCommand(CanExecute = nameof(CanInitiateRestore))]
     public void InitiateRestore(BackupRecord? record)
     {
         var target = record ?? SelectedRecord;
-        if (target == null) return;
+        if (!CanInitiateRestore(target) || target is null) return;
 
         RequestRestore?.Invoke(target);
     }

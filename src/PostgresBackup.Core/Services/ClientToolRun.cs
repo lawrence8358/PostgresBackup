@@ -36,7 +36,7 @@ public sealed class ClientToolRun
     /// 紀錄寫入失敗只輸出一行 <c>[WARNING]</c>，不改變作業結果 —— 已經落地的備份檔
     /// 不該因為稽核資料庫不可用而被判為失敗，但稽核缺口也不該無聲發生。
     ///
-    /// 取消（<see cref="OperationCanceledException"/>）向上傳播，因為取消不是失敗；
+    /// 取消先留下 Cancelled 紀錄，再向上傳播 <see cref="OperationCanceledException"/>；
     /// 其餘任何例外都收斂為離開碼 -1 的失敗結果，且一樣會嘗試寫入紀錄。
     /// </summary>
     public async Task<ClientToolRunResult> RunAsync(
@@ -51,12 +51,31 @@ public sealed class ClientToolRun
         var commandLine = JoinArguments(argv);
 
         var stopwatch = Stopwatch.StartNew();
-        var processResult = await ExecuteAsync(
-            request.ExecutablePath,
-            commandLine,
-            request.Connection.Password,
-            onOutputLine: line => onLogLine?.Invoke($"[{request.LogPrefix}] {line}"),
-            ct);
+        ProcessResult processResult;
+        try
+        {
+            processResult = await ExecuteAsync(
+                request.ExecutablePath,
+                commandLine,
+                request.Connection.Password,
+                onOutputLine: line => onLogLine?.Invoke($"[{request.LogPrefix}] {line}"),
+                ct);
+        }
+        catch (OperationCanceledException)
+        {
+            stopwatch.Stop();
+            // 作業 token 已取消，稽核寫入使用獨立且有時限的 token，避免一併被取消。
+            using var recordTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await WriteRecordAsync(request, new ClientToolRunResult
+            {
+                ExitCode = 130,
+                Elapsed = stopwatch.Elapsed,
+                CommandLine = commandLine,
+                ErrorMessage = CoreStrings.Get("Operation_Cancelled"),
+                RecordedFileSizeBytes = MeasureFileSize(request, false, onLogLine)
+            }, onLogLine, recordTimeout.Token, BackupStatus.Cancelled);
+            throw;
+        }
         stopwatch.Stop();
 
         // 離開碼為零只代表工具沒有抱怨。備份還要求產出檔案確實存在，該判定屬於呼叫端。
@@ -252,7 +271,8 @@ public sealed class ClientToolRun
         ClientToolRunRequest request,
         ClientToolRunResult result,
         Action<string>? onLogLine,
-        CancellationToken ct)
+        CancellationToken ct,
+        BackupStatus? status = null)
     {
         if (_historyRepo is null) return;
 
@@ -272,7 +292,7 @@ public sealed class ClientToolRun
                 Format = request.RecordedFormat,
                 FileSizeBytes = result.RecordedFileSizeBytes,
                 DurationMs = (long)result.Elapsed.TotalMilliseconds,
-                Status = result.IsSuccess ? BackupStatus.Success : BackupStatus.Failed,
+                Status = status ?? (result.IsSuccess ? BackupStatus.Success : BackupStatus.Failed),
                 ErrorMessage = result.ErrorMessage,
                 Arguments = result.CommandLine
             }, ct);

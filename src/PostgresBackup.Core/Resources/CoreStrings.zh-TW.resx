@@ -244,4 +244,10 @@
   <data name="ProfileStore_Error_FileCorrupted" xml:space="preserve">
     <value>連線設定檔已損毀而無法讀取（{0}）：{1} 其內容已無法還原，請重新建立受影響的連線設定。</value>
   </data>
+  <data name="Operation_Cancelled" xml:space="preserve"><value>作業已取消。</value></data>
+  <data name="Backup_Cancelled_PartialFile" xml:space="preserve"><value>備份已取消。若已產出部分檔案，將保留於 {0}，請勿當作完整備份使用。</value></data>
+  <data name="Restore_Cancelled_Partial" xml:space="preserve"><value>對 {0} 的還原已取消。目標資料庫可能已部分變更，取消不會復原已完成的修改。</value></data>
+  <data name="Restore_Cancelled_BeforeChanges" xml:space="preserve"><value>對 {0} 的還原已在修改目標資料庫前取消。</value></data>
+  <data name="Restore_Cancelled_Snapshot" xml:space="preserve"><value>安全快照保留於：{0}</value></data>
+  <data name="Restore_Cancelled_NoSnapshot" xml:space="preserve"><value>本次作業沒有已完成的安全快照可供使用。</value></data>
 </root>

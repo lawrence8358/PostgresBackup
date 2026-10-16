@@ -26,7 +26,11 @@ public static class Program
         rootCommand.Add(RestoreCommand.Create(services));
         rootCommand.Add(ProfileCommand.Create(services));
 
-        return await rootCommand.Parse(args).InvokeAsync(new InvocationConfiguration(), CancellationToken.None);
+        // Ctrl+C 的 token 由 System.CommandLine 傳給非同步 action；留時間終止工具並寫入取消紀錄。
+        return await rootCommand.Parse(args).InvokeAsync(new InvocationConfiguration
+        {
+            ProcessTerminationTimeout = TimeSpan.FromSeconds(15)
+        }, CancellationToken.None);
     }
 
     private static IServiceProvider ConfigureServices()

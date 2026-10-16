@@ -13,5 +13,8 @@ public enum BackupStatus
     /// <summary>
     /// 失敗
     /// </summary>
-    Failed
+    Failed,
+
+    /// <summary>使用者取消，檔案可能不完整。</summary>
+    Cancelled
 }

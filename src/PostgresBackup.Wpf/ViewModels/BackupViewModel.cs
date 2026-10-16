@@ -172,8 +172,8 @@ public partial class BackupViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
-    public async Task StartBackupAsync()
+    [RelayCommand(IncludeCancelCommand = true)]
+    public async Task StartBackupAsync(CancellationToken ct = default)
     {
         if (IsBackingUp) return;
 
@@ -197,7 +197,8 @@ public partial class BackupViewModel : ObservableObject
 
         try
         {
-            var password = await _profileRepo.GetPasswordAsync(SelectedProfile.Id);
+            var password = await _profileRepo.GetPasswordAsync(SelectedProfile.Id, ct);
+            ct.ThrowIfCancellationRequested();
             var connSettings = SelectedProfile.ToConnectionSettings(password);
 
             var schemaList = SchemasText
@@ -222,7 +223,8 @@ public partial class BackupViewModel : ObservableObject
 
             var result = await _backupService.BackupAsync(
                 options,
-                onLogLine: AppendLog);
+                onLogLine: AppendLog,
+                ct: ct);
             await _terminalOutputBuffer.FlushAsync();
 
             if (result.IsSuccess)
@@ -239,6 +241,15 @@ public partial class BackupViewModel : ObservableObject
                 StatusMessage = LocalizationService.S("Backup_Status_Failed_Summary");
                 ErrorDetails = result.ErrorMessage ?? string.Empty;
             }
+        }
+        catch (OperationCanceledException ex)
+        {
+            AppendLog($"[CANCELLED] {ex.Message}");
+            await _terminalOutputBuffer.FlushAsync();
+            StatusKind = OperationStatusKind.Cancelled;
+            StatusBadgeText = LocalizationService.S("Status_Cancelled");
+            StatusMessage = LocalizationService.S("Backup_Status_Cancelled");
+            ErrorDetails = ex.Message;
         }
         catch (Exception ex)
         {

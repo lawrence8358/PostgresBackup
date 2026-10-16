@@ -97,170 +97,183 @@ public static class BackupCommand
         command.Add(pgBinPathOption);
         command.Add(logFileOption);
 
-        command.SetAction(async parseResult =>
+        command.SetAction(async (parseResult, ct) =>
         {
-            var profileName = parseResult.GetValue(profileOption);
-            var host = parseResult.GetValue(hostOption);
-            var port = parseResult.GetValue(portOption);
-            var database = parseResult.GetValue(databaseOption);
-            var username = parseResult.GetValue(usernameOption);
-            var password = parseResult.GetValue(passwordOption);
-            var formatStr = parseResult.GetValue(formatOption);
-            var modeStr = parseResult.GetValue(modeOption);
-            var schemas = parseResult.GetValue(schemaOption);
-            var tables = parseResult.GetValue(tableOption);
-            var outputDir = parseResult.GetValue(outputDirOption);
-            var outputFile = parseResult.GetValue(outputFileOption);
-            var pgBinPath = parseResult.GetValue(pgBinPathOption);
-            var logFilePath = parseResult.GetValue(logFileOption);
-
-            var profileRepo = services.GetRequiredService<IConnectionProfileRepository>();
-            var backupService = services.GetRequiredService<IBackupService>();
-
-            var connSettings = new ConnectionSettings();
-
-            // 若有指定 Profile，先讀取 Profile
-            if (!string.IsNullOrWhiteSpace(profileName))
+            StreamWriter? logWriter = null;
+            try
             {
-                // 存取被拒與「找不到設定」是兩回事：此存放區只有系統管理員讀得到，
-                // 折疊成後者會讓一般使用者去重建一份其實已經存在的設定。
-                var profiles = await ProfileStoreAccess.TryLoadAllAsync(profileRepo);
-                if (profiles == null)
-                {
-                    return 1;
-                }
+                ct.ThrowIfCancellationRequested();
+                var profileName = parseResult.GetValue(profileOption);
+                var host = parseResult.GetValue(hostOption);
+                var port = parseResult.GetValue(portOption);
+                var database = parseResult.GetValue(databaseOption);
+                var username = parseResult.GetValue(usernameOption);
+                var password = parseResult.GetValue(passwordOption);
+                var formatStr = parseResult.GetValue(formatOption);
+                var modeStr = parseResult.GetValue(modeOption);
+                var schemas = parseResult.GetValue(schemaOption);
+                var tables = parseResult.GetValue(tableOption);
+                var outputDir = parseResult.GetValue(outputDirOption);
+                var outputFile = parseResult.GetValue(outputFileOption);
+                var pgBinPath = parseResult.GetValue(pgBinPathOption);
+                var logFilePath = parseResult.GetValue(logFileOption);
 
-                var matched = profiles.FirstOrDefault(p =>
-                    string.Equals(p.Id, profileName, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(p.Name, profileName, StringComparison.OrdinalIgnoreCase));
+                var profileRepo = services.GetRequiredService<IConnectionProfileRepository>();
+                var backupService = services.GetRequiredService<IBackupService>();
 
-                if (matched != null)
+                var connSettings = new ConnectionSettings();
+
+                // 若有指定 Profile，先讀取 Profile
+                if (!string.IsNullOrWhiteSpace(profileName))
                 {
-                    var (passwordRead, profilePassword) =
-                        await ProfileStoreAccess.TryGetPasswordAsync(profileRepo, matched.Id);
-                    if (!passwordRead)
+                    // 存取被拒與「找不到設定」是兩回事：此存放區只有系統管理員讀得到，
+                    // 折疊成後者會讓一般使用者去重建一份其實已經存在的設定。
+                    var profiles = await ProfileStoreAccess.TryLoadAllAsync(profileRepo);
+                    if (profiles == null)
                     {
                         return 1;
                     }
 
-                    ProfileStoreAccess.WarnIfPasswordMissing(matched.Name, profilePassword);
+                    var matched = profiles.FirstOrDefault(p =>
+                        string.Equals(p.Id, profileName, StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(p.Name, profileName, StringComparison.OrdinalIgnoreCase));
 
-                    connSettings.Host = matched.Host;
-                    connSettings.Port = matched.Port;
-                    connSettings.Database = matched.Database;
-                    connSettings.Username = matched.Username;
-                    connSettings.Password = profilePassword;
+                    if (matched != null)
+                    {
+                        var (passwordRead, profilePassword) =
+                            await ProfileStoreAccess.TryGetPasswordAsync(profileRepo, matched.Id);
+                        if (!passwordRead)
+                        {
+                            return 1;
+                        }
+
+                        ProfileStoreAccess.WarnIfPasswordMissing(matched.Name, profilePassword);
+
+                        connSettings.Host = matched.Host;
+                        connSettings.Port = matched.Port;
+                        connSettings.Database = matched.Database;
+                        connSettings.Username = matched.Username;
+                        connSettings.Password = profilePassword;
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"[ERROR] 找不到名為 '{profileName}' 的連線設定檔，備份作業已中止。");
+                        Console.ResetColor();
+                        return 1;
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(password))
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine("[WARNING] 使用 -p/--password 傳入密碼會暴露於行程資訊中（例如工作管理員、`Get-CimInstance Win32_Process` 或 PowerShell 歷史紀錄），建議改用命令列連線設定 (--profile)。");
+                    Console.ResetColor();
+                }
+
+                // 命令列參數覆蓋
+                if (!string.IsNullOrWhiteSpace(host)) connSettings.Host = host;
+                if (port.HasValue && port.Value > 0) connSettings.Port = port.Value;
+                if (!string.IsNullOrWhiteSpace(database)) connSettings.Database = database;
+                if (!string.IsNullOrWhiteSpace(username)) connSettings.Username = username;
+                if (!string.IsNullOrWhiteSpace(password)) connSettings.Password = password;
+
+                // 格式與模式
+                var format = string.Equals(formatStr, "plain", StringComparison.OrdinalIgnoreCase)
+                    ? BackupFormat.Plain
+                    : BackupFormat.Custom;
+
+                var mode = modeStr?.ToLowerInvariant() switch
+                {
+                    "schema" => BackupMode.SchemaOnly,
+                    "data" => BackupMode.DataOnly,
+                    _ => BackupMode.SchemaAndData
+                };
+
+                var scope = BackupScope.FullDatabase;
+                var schemaList = new List<string>();
+                var tableList = new List<string>();
+
+                if (schemas != null && schemas.Length > 0)
+                {
+                    scope = BackupScope.SpecificSchemas;
+                    schemaList.AddRange(schemas);
+                }
+                else if (tables != null && tables.Length > 0)
+                {
+                    scope = BackupScope.SpecificTables;
+                    tableList.AddRange(tables);
+                }
+
+                var options = new BackupOptions
+                {
+                    Connection = connSettings,
+                    Format = format,
+                    Mode = mode,
+                    Scope = scope,
+                    Schemas = schemaList,
+                    Tables = tableList,
+                    OutputDirectory = outputDir ?? Path.Combine(Environment.CurrentDirectory, "backups"),
+                    CustomFileName = outputFile,
+                    ClientToolDirectory = pgBinPath
+                };
+
+                if (!string.IsNullOrWhiteSpace(logFilePath))
+                {
+                    try
+                    {
+                        var logDir = Path.GetDirectoryName(logFilePath);
+                        if (!string.IsNullOrEmpty(logDir) && !Directory.Exists(logDir))
+                        {
+                            Directory.CreateDirectory(logDir);
+                        }
+                        logWriter = new StreamWriter(logFilePath, append: true) { AutoFlush = true };
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"[WARNING] 無法開啟日誌檔案 '{logFilePath}': {ex.Message}");
+                        Console.ResetColor();
+                    }
+                }
+
+                void OnLog(string line)
+                {
+                    Console.WriteLine(line);
+                    logWriter?.WriteLine(line);
+                }
+
+                Console.WriteLine("=================================================");
+                Console.WriteLine(" PostgresBackup CLI — 備份作業");
+                Console.WriteLine("=================================================");
+
+                var result = await backupService.BackupAsync(options, OnLog, ct);
+
+                if (result.IsSuccess)
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"\n備份成功完成！產出檔案：{result.OutputFilePath}");
+                    Console.ResetColor();
+                    return 0;
                 }
                 else
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"[ERROR] 找不到名為 '{profileName}' 的連線設定檔，備份作業已中止。");
+                    Console.WriteLine($"\n備份失敗：{result.ErrorMessage}");
                     Console.ResetColor();
                     return 1;
                 }
             }
-
-            if (!string.IsNullOrWhiteSpace(password))
+            catch (OperationCanceledException ex)
             {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("[WARNING] 使用 -p/--password 傳入密碼會暴露於行程資訊中（例如工作管理員、`Get-CimInstance Win32_Process` 或 PowerShell 歷史紀錄），建議改用命令列連線設定 (--profile)。");
-                Console.ResetColor();
+                var message = $"[CANCELLED] {ex.Message}";
+                Console.WriteLine(message);
+                logWriter?.WriteLine(message);
+                return 130;
             }
-
-            // 命令列參數覆蓋
-            if (!string.IsNullOrWhiteSpace(host)) connSettings.Host = host;
-            if (port.HasValue && port.Value > 0) connSettings.Port = port.Value;
-            if (!string.IsNullOrWhiteSpace(database)) connSettings.Database = database;
-            if (!string.IsNullOrWhiteSpace(username)) connSettings.Username = username;
-            if (!string.IsNullOrWhiteSpace(password)) connSettings.Password = password;
-
-            // 格式與模式
-            var format = string.Equals(formatStr, "plain", StringComparison.OrdinalIgnoreCase)
-                ? BackupFormat.Plain
-                : BackupFormat.Custom;
-
-            var mode = modeStr?.ToLowerInvariant() switch
+            finally
             {
-                "schema" => BackupMode.SchemaOnly,
-                "data" => BackupMode.DataOnly,
-                _ => BackupMode.SchemaAndData
-            };
-
-            var scope = BackupScope.FullDatabase;
-            var schemaList = new List<string>();
-            var tableList = new List<string>();
-
-            if (schemas != null && schemas.Length > 0)
-            {
-                scope = BackupScope.SpecificSchemas;
-                schemaList.AddRange(schemas);
-            }
-            else if (tables != null && tables.Length > 0)
-            {
-                scope = BackupScope.SpecificTables;
-                tableList.AddRange(tables);
-            }
-
-            var options = new BackupOptions
-            {
-                Connection = connSettings,
-                Format = format,
-                Mode = mode,
-                Scope = scope,
-                Schemas = schemaList,
-                Tables = tableList,
-                OutputDirectory = outputDir ?? Path.Combine(Environment.CurrentDirectory, "backups"),
-                CustomFileName = outputFile,
-                ClientToolDirectory = pgBinPath
-            };
-
-            StreamWriter? logWriter = null;
-            if (!string.IsNullOrWhiteSpace(logFilePath))
-            {
-                try
-                {
-                    var logDir = Path.GetDirectoryName(logFilePath);
-                    if (!string.IsNullOrEmpty(logDir) && !Directory.Exists(logDir))
-                    {
-                        Directory.CreateDirectory(logDir);
-                    }
-                    logWriter = new StreamWriter(logFilePath, append: true) { AutoFlush = true };
-                }
-                catch (Exception ex)
-                {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"[WARNING] 無法開啟日誌檔案 '{logFilePath}': {ex.Message}");
-                    Console.ResetColor();
-                }
-            }
-
-            void OnLog(string line)
-            {
-                Console.WriteLine(line);
-                logWriter?.WriteLine(line);
-            }
-
-            Console.WriteLine("=================================================");
-            Console.WriteLine(" PostgresBackup CLI — 備份作業");
-            Console.WriteLine("=================================================");
-
-            var result = await backupService.BackupAsync(options, OnLog);
-
-            logWriter?.Dispose();
-
-            if (result.IsSuccess)
-            {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"\n備份成功完成！產出檔案：{result.OutputFilePath}");
-                Console.ResetColor();
-                return 0;
-            }
-            else
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"\n備份失敗：{result.ErrorMessage}");
-                Console.ResetColor();
-                return 1;
+                logWriter?.Dispose();
             }
         });
 

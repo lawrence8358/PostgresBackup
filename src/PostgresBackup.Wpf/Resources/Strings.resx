@@ -610,4 +610,8 @@
   <data name="Common_UnexpectedError_Summary" xml:space="preserve">
     <value>An unexpected error occurred. See error details below.</value>
   </data>
+  <data name="Status_Cancelled" xml:space="preserve"><value>Cancelled</value></data>
+  <data name="Backup_Status_Cancelled" xml:space="preserve"><value>Backup cancelled. Any partial file is retained and must not be used as a complete backup.</value></data>
+  <data name="Restore_Status_Cancelled" xml:space="preserve"><value>Restore cancelled. The target database may be incomplete. Check the details before recovering.</value></data>
+  <data name="Operation_Cancel" xml:space="preserve"><value>Cancel operation</value></data>
 </root>

@@ -29,6 +29,7 @@ public class ToolDetectionService : IToolDetectionService
 
     public async Task<ToolDetectionResult> DetectAsync(string? customPath = null, CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
         // 1. 自訂路徑檢查
         if (!string.IsNullOrWhiteSpace(customPath))
         {
@@ -205,6 +206,10 @@ public class ToolDetectionService : IToolDetectionService
             {
                 ToolVersion.TryParse(procResult.StandardOutput, out version);
             }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

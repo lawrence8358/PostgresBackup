@@ -9,6 +9,79 @@ namespace PostgresBackup.Wpf.Tests;
 public class OperationFeedbackTests
 {
     [Fact]
+    public async Task Restore_command_cancellation_is_not_reported_as_an_unexpected_error()
+    {
+        var source = Path.GetTempFileName();
+        try
+        {
+            var repository = new Mock<IConnectionProfileRepository>();
+            repository.Setup(r => r.GetPasswordAsync("profile-1", It.IsAny<CancellationToken>())).ReturnsAsync("test");
+            var service = new Mock<IRestoreService>();
+            service.Setup(s => s.RestoreAsync(It.IsAny<RestoreOptions>(), It.IsAny<Action<string>?>(), It.IsAny<CancellationToken>()))
+                .Returns<RestoreOptions, Action<string>?, CancellationToken>(async (_, _, ct) =>
+                {
+                    try { await Task.Delay(Timeout.Infinite, ct); }
+                    catch (OperationCanceledException ex)
+                    {
+                        throw new OperationCanceledException("Snapshot: D:\\snapshots\\safe.dump", ex, ct);
+                    }
+                    throw new InvalidOperationException("取消未生效");
+                });
+            var vm = new RestoreViewModel(service.Object, repository.Object)
+            {
+                SourceFilePath = source,
+                SelectedProfile = new ConnectionProfile { Id = "profile-1", Database = "postgres" },
+                IsConfirmed = true
+            };
+
+            var operation = vm.StartRestoreCommand.ExecuteAsync(null);
+            try { Assert.True(vm.StartRestoreCommand.CanBeCanceled); }
+            finally { vm.StartRestoreCommand.Cancel(); }
+            await operation.WaitAsync(TimeSpan.FromSeconds(5));
+
+            Assert.False(vm.IsRestoring);
+            Assert.Equal("Cancelled", vm.StatusKind.ToString());
+            Assert.Contains(@"D:\snapshots\safe.dump", vm.ErrorDetails);
+            Assert.False(vm.IsConfirmed);
+        }
+        finally { File.Delete(source); }
+    }
+
+    [Fact]
+    public async Task Backup_command_can_be_cancelled_and_returns_to_an_idle_execution_state()
+    {
+        var repository = new Mock<IConnectionProfileRepository>();
+        repository.Setup(r => r.GetPasswordAsync("profile-1", It.IsAny<CancellationToken>())).ReturnsAsync("test");
+        var service = new Mock<IBackupService>();
+        service.Setup(s => s.BackupAsync(It.IsAny<BackupOptions>(), It.IsAny<Action<string>?>(), It.IsAny<CancellationToken>()))
+            .Returns<BackupOptions, Action<string>?, CancellationToken>(async (_, log, ct) =>
+            {
+                log?.Invoke("[pg_dump] running");
+                await Task.Delay(Timeout.Infinite, ct);
+                throw new InvalidOperationException("取消未生效");
+            });
+        var vm = new BackupViewModel(service.Object, repository.Object)
+        {
+            SelectedProfile = new ConnectionProfile { Id = "profile-1", Database = "postgres" }
+        };
+
+        var operation = vm.StartBackupCommand.ExecuteAsync(null);
+        try
+        {
+            Assert.True(vm.StartBackupCommand.CanBeCanceled);
+        }
+        finally
+        {
+            vm.StartBackupCommand.Cancel();
+        }
+        await operation.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.False(vm.IsBackingUp);
+        Assert.Equal("Cancelled", vm.StatusKind.ToString());
+        Assert.Contains("[pg_dump] running", vm.TerminalOutput);
+    }
+
+    [Fact]
     public async Task Backup_shows_busy_state_and_streams_live_terminal_output()
     {
         var repository = new Mock<IConnectionProfileRepository>();

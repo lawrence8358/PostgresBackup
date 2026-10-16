@@ -8,6 +8,19 @@ namespace PostgresBackup.Core.Tests.Services;
 
 public class ToolDetectionServiceTests
 {
+    [Fact]
+    public async Task DetectAsync_WhenVersionProbeIsCancelled_PropagatesCancellation()
+    {
+        var directory = @"C:\test-tools";
+        var dump = Path.Combine(directory, "pg_dump.exe");
+        _mockProbe.Setup(p => p.DirectoryExists(directory)).Returns(true);
+        _mockProbe.Setup(p => p.FileExists(It.IsAny<string>())).Returns(true);
+        _mockRunner.Setup(r => r.RunAsync(dump, "--version", null, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => _service.DetectAsync(directory));
+    }
+
     private readonly Mock<IProcessRunner> _mockRunner;
     private readonly Mock<IEnvironmentProbe> _mockProbe;
     private readonly ToolDetectionService _service;

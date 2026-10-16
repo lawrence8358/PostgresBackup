@@ -31,6 +31,8 @@ public class BackupService : IBackupService
     {
         ArgumentNullException.ThrowIfNull(options);
 
+        ct.ThrowIfCancellationRequested();
+
         // 1. 驗證與解析客戶端工具路徑
         var detection = await _toolDetector.DetectAsync(options.ClientToolDirectory, ct);
         if (!detection.IsReady || string.IsNullOrWhiteSpace(detection.PgDumpPath))
@@ -39,6 +41,7 @@ public class BackupService : IBackupService
             onLogLine?.Invoke($"[ERROR] {errMsg}");
             return BackupResult.Failure(errMsg, -1, TimeSpan.Zero, string.Empty);
         }
+        ct.ThrowIfCancellationRequested();
         var pgDumpPath = detection.PgDumpPath;
 
         // 2. 確保輸出目錄存在
@@ -56,7 +59,7 @@ public class BackupService : IBackupService
         }
 
         // 3. 計算輸出檔案路徑與作業專屬參數
-        var targetFilePath = options.GetTargetFilePath();
+        var targetFilePath = Path.GetFullPath(options.GetTargetFilePath());
         var arguments = BackupArgumentsBuilder.Build(options, targetFilePath);
 
         onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Backup_Log_Start", options.Connection.Database)}");
@@ -65,24 +68,34 @@ public class BackupService : IBackupService
         onLogLine?.Invoke($"[{DateTime.Now:HH:mm:ss}] {CoreStrings.Format("Backup_Log_Tool", pgDumpPath)}");
 
         // 4. 執行一次客戶端工具作業
-        var run = await _clientToolRun.RunAsync(
-            new ClientToolRunRequest
-            {
-                ExecutablePath = pgDumpPath,
-                Arguments = arguments,
-                Connection = options.Connection,
-                LogPrefix = "pg_dump",
-                NonZeroExitErrorKey = "Backup_Error_NonZeroExit",
-                OperationType = options.OperationType,
-                RecordedFilePath = targetFilePath,
-                RecordedFormat = options.Format,
-                // 離開碼為零仍不足以稱為成功：備份檔沒有落地就不是一份備份。
-                ConfirmSuccess = () => File.Exists(targetFilePath),
-                MeasureRecordedFileSize = succeeded =>
-                    succeeded ? new FileInfo(targetFilePath).Length : 0
-            },
-            onLogLine,
-            ct);
+        ClientToolRunResult run;
+        try
+        {
+            run = await _clientToolRun.RunAsync(
+                new ClientToolRunRequest
+                {
+                    ExecutablePath = pgDumpPath,
+                    Arguments = arguments,
+                    Connection = options.Connection,
+                    LogPrefix = "pg_dump",
+                    NonZeroExitErrorKey = "Backup_Error_NonZeroExit",
+                    OperationType = options.OperationType,
+                    RecordedFilePath = targetFilePath,
+                    RecordedFormat = options.Format,
+                    // 離開碼為零仍不足以稱為成功：備份檔沒有落地就不是一份備份。
+                    ConfirmSuccess = () => File.Exists(targetFilePath),
+                    MeasureRecordedFileSize = succeeded =>
+                        succeeded ? new FileInfo(targetFilePath).Length : 0
+                },
+                onLogLine,
+                ct);
+        }
+        catch (OperationCanceledException ex)
+        {
+            var message = CoreStrings.Format("Backup_Cancelled_PartialFile", targetFilePath);
+            onLogLine?.Invoke($"[CANCELLED] {message}");
+            throw new OperationCanceledException(message, ex, ct);
+        }
 
         // 5. 轉換為備份作業結果
         if (run.IsSuccess)
