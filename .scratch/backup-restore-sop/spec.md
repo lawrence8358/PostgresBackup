@@ -23,3 +23,10 @@ Status: resolved
 
 2026-10-16 完成三平台真實備份還原，資料均恢復 3 客戶、5 訂單、5200；10 張實際截圖。dotnet test PostgresBackup.sln --no-restore --verbosity minimal：Core 124、CLI 56、WPF 49，合計229項通過。未發現產品bug。Windows實測一般登入使用者排程，SYSTEM需管理員故未宣稱實測。已完成 Standards / Spec 雙軸 code review；修正桌面圖說的領域用語，並補上 WSL 發行版名稱查詢與 Docker Integration 設定。文件連結與 git diff --check 通過，Linux check-tools 實機重驗 READY / 18.6。
 
+
+## 後續交付與 v1.0.0 發布需求
+
+- 補上十萬／百萬筆合成資料的實際備份還原負載驗證、完整內容校驗與截圖；不把單機測試宣稱為高併發容量。
+- Windows／Linux 各自獨立離線交付包，含 CLI、必要軟體、授權、操作腳本及最簡手冊；軟體、壓縮檔與模擬腳本不簽入，發布為附件。
+- 名稱使用「DB 備份」，文件在 `docs/db-backup/`；Windows 部署 `D:\DBBackup`，Linux 部署 `/opt/db-backup`。正式操作保持目標綁定與還原確認，權限限制如實註明。
+- 使用者授權發布 `v1.0.0`：重編兩平台自包含 CLI、驗證真實版本與備份還原，完整測試通過後 commit／push／tag，將兩 ZIP 與 SHA256SUMS 發布 GitHub Release；手冊連至 latest/download 穩定附件名稱。

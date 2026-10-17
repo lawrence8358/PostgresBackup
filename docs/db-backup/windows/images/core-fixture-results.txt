@@ -1,0 +1,3 @@
+PASS: bound pgpass with colon/backslash password connected through explicit target flags.
+PASS: real CLI backup -> delete 10 rows -> restore with snapshot -> complete content 250|b787204e848ddd7518b6b2bfa440379b
+CORE_FIXTURE_ALL_PASS (current-user credential ACL; Admin/SYSTEM OS permissions remain untested).

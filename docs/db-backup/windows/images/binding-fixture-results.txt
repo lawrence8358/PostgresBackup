@@ -1,0 +1,9 @@
+PASS: matching target and escaped password accepted; all connection flags explicit.
+PASS: persisted production.json DB_HOST drift rejected before CLI.
+PASS: persisted production.json DB_PORT drift rejected before CLI.
+PASS: persisted production.json DB_NAME drift rejected before CLI.
+PASS: persisted production.json DB_USER drift rejected before CLI.
+PASS: empty password refused before CLI.
+PASS: distinct package task names and copied credentials refused.
+FIXTURE_ALL_PASS; no production CLI or Task Scheduler mutation was performed.
+PASS: actual 09 guard drift exits 1, writes stderr and last-error.log before CLI (only admin check stubbed in fixture).

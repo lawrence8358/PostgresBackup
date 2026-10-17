@@ -1,0 +1,2 @@
+61c4d3e30b8b828ee5383b7febab748940ee715b9441016062eb2b135c231b71  PostgresBackup-Linux-x64.zip
+9d3e2f55d626bbe5c6b20204e073ef220b2d1f00807412eabe96ac17959ac83c  PostgresBackup-Windows-x64.zip

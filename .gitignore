@@ -54,3 +54,11 @@ issue/
 
 ## [Integration verification — 依 spec 規定不簽入版控]
 verify-scheduled-backup.ps1
+
+## [Local DB backup bundles — software and rehearsal scripts are not committed]
+/docs/db-backup/*/software/
+/docs/db-backup/*/scripts/
+/docs/db-backup/*/work/
+/docs/db-backup/*/runtime/
+/docs/db-backup/*/MIS_DEMO_STATE/
+/docs/db-backup/*.zip

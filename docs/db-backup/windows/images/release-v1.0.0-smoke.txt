@@ -1,0 +1,21 @@
+Windows release v1.0.0
+Packaged CLI --version:
+1.0.0
+Publish: self-contained win-x64, native libraries bundled for self extraction.
+FileVersion=1.0.0.0 ; ProductVersion=1.0.0
+
+PASS: matching target and escaped password accepted; all connection flags explicit.
+PASS: persisted production.json DB_HOST drift rejected before CLI.
+PASS: persisted production.json DB_PORT drift rejected before CLI.
+PASS: persisted production.json DB_NAME drift rejected before CLI.
+PASS: persisted production.json DB_USER drift rejected before CLI.
+PASS: empty password refused before CLI.
+PASS: distinct package task names and copied credentials refused.
+FIXTURE_ALL_PASS; no production CLI or Task Scheduler mutation was performed.
+
+PASS: bound pgpass with colon/backslash password connected through explicit target flags.
+PASS: real CLI backup -> delete 10 rows -> restore with snapshot -> complete content 250|b787204e848ddd7518b6b2bfa440379b
+CORE_FIXTURE_ALL_PASS (current-user credential ACL; Admin/SYSTEM OS permissions remain untested).
+
+Temporary fixture database and role removed.
+Local acceptance PostgreSQL stopped; demonstration schedule disabled.

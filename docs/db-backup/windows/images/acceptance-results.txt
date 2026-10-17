@@ -1,0 +1,29 @@
+Acceptance root: C:\MIS-Acceptance\Windows
+Database: MIS_DEMO_DB / 127.0.0.1:55441
+Software: packaged PostgreSQL 18.6 + self-contained pgbackup
+
+MIS_DEMO_READY: localhost:55441, 1000 customers / 100000 orders.
+
+S4U registration: Access is denied / HRESULT 0x80070005
+TaskName=PostgresBackup-MIS-DEMO-55441
+LogonType=Interactive
+LastRunTime=2026-10-17T10:05:31
+LastTaskResult=0
+
+Baseline: customers|MD5 ; orders|amount|payload bytes|MD5
+1000|d8370884971c6240e13ff4775b275653
+100000|49999500.00|51200000|e967ddfe9349f25a0ec1d6d742b977bc
+
+After test mutation:
+1000|9dad3eeceee6023fec6ced81d6e1aed9
+99000|49994495.00|50688000|8e6417becc0cc0ab4bf6eed9bc51bdf1
+
+After restore:
+1000|d8370884971c6240e13ff4775b275653
+100000|49999500.00|51200000|e967ddfe9349f25a0ec1d6d742b977bc
+
+Backup bytes: 3010653
+Pre-restore snapshot bytes: 2981774
+MIS_DEMO_RESTORE_OK: both table counts and complete-content MD5 match baseline.
+Task state after stop: Disabled
+Postmaster PID file exists: False
